@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,8 +91,8 @@ namespace Game
             if (factionEntry == null)
                 return 0;
 
-            ulong raceMask = _player.getRaceMask();
-            uint classMask = _player.getClassMask();
+            ulong raceMask = _player.GetRaceMask();
+            uint classMask = _player.GetClassMask();
             for (var i = 0; i < 4; i++)
             {
                 if ((Convert.ToBoolean(factionEntry.ReputationRaceMask[i] & raceMask) ||
@@ -149,8 +149,8 @@ namespace Game
             if (factionEntry == null)
                 return 0;
 
-            ulong raceMask = _player.getRaceMask();
-            uint classMask = _player.getClassMask();
+            ulong raceMask = _player.GetRaceMask();
+            uint classMask = _player.GetClassMask();
             for (int i = 0; i < 4; i++)
             {
                 if ((Convert.ToBoolean(factionEntry.ReputationRaceMask[i] & raceMask) ||
@@ -247,7 +247,7 @@ namespace Game
                 if (factionEntry.CanHaveReputation())
                 {
                     FactionState newFaction = new FactionState();
-                    newFaction.ID = factionEntry.Id;
+                    newFaction.Id = factionEntry.Id;
                     newFaction.ReputationListID = (uint)factionEntry.ReputationIndex;
                     newFaction.Standing = 0;
                     newFaction.Flags = (FactionFlags)(GetDefaultStateFlags(factionEntry) & 0xFF);//todo fixme for higher value then byte?????
@@ -399,7 +399,7 @@ namespace Game
             var factionEntry = CliDB.FactionStorage.LookupByKey(factionTemplateEntry.Faction);
             if (factionEntry.Id != 0)
                 // Never show factions of the opposing team
-                if (!Convert.ToBoolean(factionEntry.ReputationRaceMask[1] & _player.getRaceMask()) && factionEntry.ReputationBase[1] == Reputation_Bottom)
+                if (!Convert.ToBoolean(factionEntry.ReputationRaceMask[1] & _player.GetRaceMask()) && factionEntry.ReputationBase[1] == Reputation_Bottom)
                     SetVisible(factionEntry);
         }
 
@@ -559,12 +559,12 @@ namespace Game
                 {
                     PreparedStatement stmt = DB.Characters.GetPreparedStatement(CharStatements.DEL_CHAR_REPUTATION_BY_FACTION);
                     stmt.AddValue(0, _player.GetGUID().GetCounter());
-                    stmt.AddValue(1, factionState.ID);
+                    stmt.AddValue(1, factionState.Id);
                     trans.Append(stmt);
 
                     stmt = DB.Characters.GetPreparedStatement(CharStatements.INS_CHAR_REPUTATION_BY_FACTION);
                     stmt.AddValue(0, _player.GetGUID().GetCounter());
-                    stmt.AddValue(1, factionState.ID);
+                    stmt.AddValue(1, factionState.Id);
                     stmt.AddValue(2, factionState.Standing);
                     stmt.AddValue(3, factionState.Flags);
                     trans.Append(stmt);
@@ -660,7 +660,7 @@ namespace Game
     }
     public class FactionState
     {
-        public uint ID;
+        public uint Id;
         public uint ReputationListID;
         public int Standing;
         public FactionFlags Flags;

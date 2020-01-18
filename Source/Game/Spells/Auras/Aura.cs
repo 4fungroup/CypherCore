@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,6 +150,8 @@ namespace Game.Spells
             }
 
             if (GetBase().GetSpellInfo().HasAttribute(SpellAttr8.AuraSendAmount) ||
+                GetBase().HasEffectType(AuraType.OverrideActionbarSpells) ||
+                GetBase().HasEffectType(AuraType.OverrideActionbarSpellsTriggered) ||
                 GetBase().HasEffectType(AuraType.ModSpellCategoryCooldown) ||
                 GetBase().HasEffectType(AuraType.ModMaxCharges) ||
                 GetBase().HasEffectType(AuraType.ChargeRecoveryMod) ||
@@ -282,19 +284,20 @@ namespace Game.Spells
     {
         const int UPDATE_TARGET_MAP_INTERVAL = 500;
 
-        public Aura(SpellInfo spellproto, ObjectGuid castId, WorldObject owner, Unit caster, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, int castItemLevel)
+        public Aura(SpellInfo spellproto, ObjectGuid castId, WorldObject owner, Unit caster, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, uint castItemId, int castItemLevel)
         {
             m_spellInfo = spellproto;
             m_castGuid = castId;
             m_casterGuid = !casterGUID.IsEmpty() ? casterGUID : caster.GetGUID();
             m_castItemGuid = castItem != null ? castItem.GetGUID() : castItemGuid;
+            m_castItemId = castItem != null ? castItem.GetEntry() : castItemId;
             m_castItemLevel = castItemLevel;
             m_spellXSpellVisualId = caster ? caster.GetCastSpellXSpellVisualId(spellproto) : spellproto.GetSpellXSpellVisualId();
             m_applyTime = Time.UnixTime;
             m_owner = owner;
             m_timeCla = 0;
             m_updateTargetMapInterval = 0;
-            m_casterLevel = caster != null ? caster.getLevel() : m_spellInfo.SpellLevel;
+            m_casterLevel = caster != null ? caster.GetLevel() : m_spellInfo.SpellLevel;
             m_procCharges = 0;
             m_stackAmount = 1;
             m_isRemoved = false;
@@ -1646,7 +1649,7 @@ namespace Game.Spells
             SetLastProcSuccessTime(now);
         }
 
-        public uint IsProcTriggeredOnEvent(AuraApplication aurApp, ProcEventInfo eventInfo, DateTime now)
+        public uint GetProcEffectMask(AuraApplication aurApp, ProcEventInfo eventInfo, DateTime now)
         {
             SpellProcEntry procEntry = Global.SpellMgr.GetSpellProcEntry(GetId());
             // only auras with spell proc entry can trigger proc
@@ -1712,9 +1715,9 @@ namespace Game.Spells
             // At least one effect has to pass checks to proc aura
             uint procEffectMask = 0;
             for (byte i = 0; i < SpellConst.MaxEffects; ++i)
-                if (aurApp.HasEffect(i))
-                    if (GetEffect(i).CheckEffectProc(aurApp, eventInfo))
-                        procEffectMask |= (1u << i);
+                if ((procEffectMask & (1u << i)) != 0)
+                    if ((procEntry.DisableEffectsMask & (1u << i)) != 0 || !GetEffect(i).CheckEffectProc(aurApp, eventInfo))
+                        procEffectMask &= ~(1u << i);
 
             if (procEffectMask == 0)
                 return 0;
@@ -1798,6 +1801,11 @@ namespace Game.Spells
                 if (modOwner != null)
                     modOwner.ApplySpellMod(GetId(), SpellModOp.ChanceOfSuccess, ref chance);
             }
+
+            // proc chance is reduced by an additional 3.333% per level past 60
+            if (procEntry.AttributesMask.HasAnyFlag(ProcAttributes.ReduceProc60) && eventInfo.GetActor().GetLevel() > 60)
+                chance = Math.Max(0.0f, (1.0f - ((eventInfo.GetActor().GetLevel() - 60) * 1.0f / 30.0f)) * chance);
+
             return chance;
         }
 
@@ -1830,7 +1838,7 @@ namespace Game.Spells
             float ppm = m_spellInfo.CalcProcPPM(actor, m_castItemLevel);
             float averageProcInterval = 60.0f / ppm;
 
-            var currentTime = DateTime.Now;
+            var currentTime = GameTime.GetGameTimeSteadyPoint();
             float secondsSinceLastAttempt = Math.Min((float)(currentTime - m_lastProcAttemptTime).TotalSeconds, 10.0f);
             float secondsSinceLastProc = Math.Min((float)(currentTime - m_lastProcSuccessTime).TotalSeconds, 1000.0f);
 
@@ -2235,6 +2243,7 @@ namespace Game.Spells
         public ObjectGuid GetCastGUID() { return m_castGuid; }
         public ObjectGuid GetCasterGUID() { return m_casterGuid; }
         public ObjectGuid GetCastItemGUID() { return m_castItemGuid; }
+        public uint GetCastItemId() { return m_castItemId; }
         public int GetCastItemLevel() { return m_castItemLevel; }
         public uint GetSpellXSpellVisualId() { return m_spellXSpellVisualId; }
         public WorldObject GetOwner() { return m_owner; }
@@ -2252,6 +2261,11 @@ namespace Game.Spells
         public void SetCastItemGUID(ObjectGuid guid)
         {
             m_castItemGuid = guid;
+        }
+
+        public void SetCastItemId(uint id)
+        {
+            m_castItemId = id;
         }
 
         public void SetCastItemLevel(int level)
@@ -2383,12 +2397,12 @@ namespace Game.Spells
             }
             return (effMask & availableEffectMask);
         }
-        public static Aura TryRefreshStackOrCreate(SpellInfo spellproto, ObjectGuid castId, uint tryEffMask, WorldObject owner, Unit caster, int[] baseAmount = null, Item castItem = null, ObjectGuid casterGUID = default(ObjectGuid), bool resetPeriodicTimer = true, ObjectGuid castItemGuid = default(ObjectGuid), int castItemLevel = -1)
+        public static Aura TryRefreshStackOrCreate(SpellInfo spellproto, ObjectGuid castId, uint tryEffMask, WorldObject owner, Unit caster, int[] baseAmount = null, Item castItem = null, ObjectGuid casterGUID = default, bool resetPeriodicTimer = true, ObjectGuid castItemGuid = default, uint castItemId = 0, int castItemLevel = -1)
         {
             bool throwway;
-            return TryRefreshStackOrCreate(spellproto, castId, tryEffMask, owner, caster, out throwway, baseAmount, castItem, casterGUID, resetPeriodicTimer, castItemGuid, castItemLevel);
+            return TryRefreshStackOrCreate(spellproto, castId, tryEffMask, owner, caster, out throwway, baseAmount, castItem, casterGUID, resetPeriodicTimer, castItemGuid, castItemId, castItemLevel);
         }
-        public static Aura TryRefreshStackOrCreate(SpellInfo spellproto, ObjectGuid castId, uint tryEffMask, WorldObject owner, Unit caster, out bool refresh, int[] baseAmount, Item castItem = null, ObjectGuid casterGUID = default(ObjectGuid), bool resetPeriodicTimer = true, ObjectGuid castItemGuid = default(ObjectGuid), int castItemLevel = -1)
+        public static Aura TryRefreshStackOrCreate(SpellInfo spellproto, ObjectGuid castId, uint tryEffMask, WorldObject owner, Unit caster, out bool refresh, int[] baseAmount, Item castItem = null, ObjectGuid casterGUID = default, bool resetPeriodicTimer = true, ObjectGuid castItemGuid = default, uint castItemId = 0, int castItemLevel = -1)
         {
             Cypher.Assert(spellproto != null);
             Cypher.Assert(owner != null);
@@ -2399,7 +2413,7 @@ namespace Game.Spells
             uint effMask = BuildEffectMaskForOwner(spellproto, tryEffMask, owner);
             if (effMask == 0)
                 return null;
-            Aura foundAura = owner.ToUnit()._TryStackingOrRefreshingExistingAura(spellproto, effMask, caster, baseAmount, castItem, casterGUID, resetPeriodicTimer, castItemGuid, castItemLevel);
+            Aura foundAura = owner.ToUnit()._TryStackingOrRefreshingExistingAura(spellproto, effMask, caster, baseAmount, castItem, casterGUID, resetPeriodicTimer, castItemGuid, castItemId, castItemLevel);
             if (foundAura != null)
             {
                 // we've here aura, which script triggered removal after modding stack amount
@@ -2411,9 +2425,9 @@ namespace Game.Spells
                 return foundAura;
             }
             else
-                return Create(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemLevel);
+                return Create(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemId, castItemLevel);
         }
-        public static Aura TryCreate(SpellInfo spellproto, ObjectGuid castId, uint tryEffMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem = null, ObjectGuid casterGUID = default(ObjectGuid), ObjectGuid castItemGuid = default(ObjectGuid), int castItemLevel = -1)
+        public static Aura TryCreate(SpellInfo spellproto, ObjectGuid castId, uint tryEffMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem = null, ObjectGuid casterGUID = default, ObjectGuid castItemGuid = default, uint castItemId = 0, int castItemLevel = -1)
         {
             Cypher.Assert(spellproto != null);
             Cypher.Assert(owner != null);
@@ -2422,9 +2436,9 @@ namespace Game.Spells
             uint effMask = BuildEffectMaskForOwner(spellproto, tryEffMask, owner);
             if (effMask == 0)
                 return null;
-            return Create(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemLevel);
+            return Create(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemId, castItemLevel);
         }
-        public static Aura Create(SpellInfo spellproto, ObjectGuid castId, uint effMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, int castItemLevel)
+        public static Aura Create(SpellInfo spellproto, ObjectGuid castId, uint effMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, uint castItemId, int castItemLevel)
         {
             Cypher.Assert(effMask != 0);
             Cypher.Assert(spellproto != null);
@@ -2443,7 +2457,7 @@ namespace Game.Spells
                 casterGUID = caster.GetGUID();
 
             // check if aura can be owned by owner
-            if (owner.isTypeMask(TypeMask.Unit))
+            if (owner.IsTypeMask(TypeMask.Unit))
                 if (!owner.IsInWorld || owner.ToUnit().IsDuringRemoveFromWorld())
                     // owner not in world so don't allow to own not self casted single target auras
                     if (casterGUID != owner.GetGUID() && spellproto.IsSingleTarget())
@@ -2454,10 +2468,10 @@ namespace Game.Spells
             {
                 case TypeId.Unit:
                 case TypeId.Player:
-                    aura = new UnitAura(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemLevel);
+                    aura = new UnitAura(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemId, castItemLevel);
                     break;
                 case TypeId.DynamicObject:
-                    aura = new DynObjAura(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemLevel);
+                    aura = new DynObjAura(spellproto, castId, effMask, owner, caster, baseAmount, castItem, casterGUID, castItemGuid, castItemId, castItemLevel);
                     break;
                 default:
                     Cypher.Assert(false);
@@ -2475,6 +2489,7 @@ namespace Game.Spells
         ObjectGuid m_castGuid;
         ObjectGuid m_casterGuid;
         ObjectGuid m_castItemGuid;
+        uint m_castItemId;
         int m_castItemLevel;
         uint m_spellXSpellVisualId;
         long m_applyTime;
@@ -2511,8 +2526,8 @@ namespace Game.Spells
 
     public class UnitAura : Aura
     {
-        public UnitAura(SpellInfo spellproto, ObjectGuid castId, uint effMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, int castItemLevel)
-            : base(spellproto, castId, owner, caster, castItem, casterGUID, castItemGuid, castItemLevel)
+        public UnitAura(SpellInfo spellproto, ObjectGuid castId, uint effMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, uint castItemId, int castItemLevel)
+            : base(spellproto, castId, owner, caster, castItem, casterGUID, castItemGuid, castItemId, castItemLevel)
         {
             m_AuraDRGroup = DiminishingGroup.None;
             LoadScripts();
@@ -2622,8 +2637,8 @@ namespace Game.Spells
 
     public class DynObjAura : Aura
     {
-        public DynObjAura(SpellInfo spellproto, ObjectGuid castId, uint effMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, int castItemLevel)
-            : base(spellproto, castId, owner, caster, castItem, casterGUID, castItemGuid, castItemLevel)
+        public DynObjAura(SpellInfo spellproto, ObjectGuid castId, uint effMask, WorldObject owner, Unit caster, int[] baseAmount, Item castItem, ObjectGuid casterGUID, ObjectGuid castItemGuid, uint castItemId, int castItemLevel)
+            : base(spellproto, castId, owner, caster, castItem, casterGUID, castItemGuid, castItemId, castItemLevel)
         {
             LoadScripts();
             Cypher.Assert(GetDynobjOwner() != null);
@@ -2710,7 +2725,7 @@ namespace Game.Spells
             if (ReferenceEquals(first, other))
                 return true;
 
-            if ((object)first == null || (object)other == null)
+            if (ReferenceEquals(first, null) || ReferenceEquals(other, null))
                 return false;
 
             return first.Equals(other);

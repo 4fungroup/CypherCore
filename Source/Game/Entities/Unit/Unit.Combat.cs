@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,10 +43,10 @@ namespace Game.Entities
 
             // Search in threat list
             ObjectGuid guid = who.GetGUID();
-            foreach (var refe in GetThreatManager().getThreatList())
+            foreach (var refe in GetThreatManager().GetThreatList())
             {
                 // Return true if the unit matches
-                if (refe != null && refe.getUnitGuid() == guid)
+                if (refe != null && refe.GetUnitGuid() == guid)
                     return true;
             }
 
@@ -60,18 +60,18 @@ namespace Game.Entities
 
         public void SendChangeCurrentVictim(HostileReference pHostileReference)
         {
-            if (!GetThreatManager().isThreatListEmpty())
+            if (!GetThreatManager().IsThreatListEmpty())
             {
                 HighestThreatUpdate packet = new HighestThreatUpdate();
                 packet.UnitGUID = GetGUID();
-                packet.HighestThreatGUID = pHostileReference.getUnitGuid();
+                packet.HighestThreatGUID = pHostileReference.GetUnitGuid();
 
-                var refeList = GetThreatManager().getThreatList();
+                var refeList = GetThreatManager().GetThreatList();
                 foreach (var refe in refeList)
                 {
                     ThreatInfo info = new ThreatInfo();
-                    info.UnitGUID = refe.getUnitGuid();
-                    info.Threat = (long)refe.getThreat() * 100;
+                    info.UnitGUID = refe.GetUnitGuid();
+                    info.Threat = (long)refe.GetThreat() * 100;
                     packet.ThreatList.Add(info);
                 }
                 SendMessageToSet(packet, false);
@@ -95,7 +95,7 @@ namespace Game.Entities
                 }
             }
 
-            var attackers = getAttackers();
+            var attackers = GetAttackers();
             for (var i = 0; i < attackers.Count;)
             {
                 var unit = attackers[i];
@@ -108,7 +108,7 @@ namespace Game.Entities
                     ++i;
             }
 
-            getHostileRefManager().deleteReferencesForFaction(factionId);
+            GetHostileRefManager().DeleteReferencesForFaction(factionId);
 
             foreach (var control in m_Controlled)
                 control.StopAttackFaction(factionId);
@@ -116,10 +116,10 @@ namespace Game.Entities
 
         public void HandleProcExtraAttackFor(Unit victim)
         {
-            while (m_extraAttacks != 0)
+            while (ExtraAttacks != 0)
             {
                 AttackerStateUpdate(victim, WeaponAttackType.BaseAttack, true);
-                --m_extraAttacks;
+                --ExtraAttacks;
             }
         }
 
@@ -136,22 +136,22 @@ namespace Game.Entities
         {
             ThreatRemove packet = new ThreatRemove();
             packet.UnitGUID = GetGUID();
-            packet.AboutGUID = pHostileReference.getUnitGuid();
+            packet.AboutGUID = pHostileReference.GetUnitGuid();
             SendMessageToSet(packet, false);
         }
 
         void SendThreatListUpdate()
         {
-            if (!GetThreatManager().isThreatListEmpty())
+            if (!GetThreatManager().IsThreatListEmpty())
             {
                 ThreatUpdate packet = new ThreatUpdate();
                 packet.UnitGUID = GetGUID();
-                var tlist = GetThreatManager().getThreatList();
+                var tlist = GetThreatManager().GetThreatList();
                 foreach (var refe in tlist)
                 {
                     ThreatInfo info = new ThreatInfo();
-                    info.UnitGUID = refe.getUnitGuid();
-                    info.Threat = (long)refe.getThreat() * 100;
+                    info.UnitGUID = refe.GetUnitGuid();
+                    info.Threat = (long)refe.GetThreat() * 100;
                     packet.ThreatList.Add(info);
                 }
                 SendMessageToSet(packet, false);
@@ -160,9 +160,9 @@ namespace Game.Entities
 
         public void DeleteThreatList()
         {
-            if (CanHaveThreatList(true) && !threatManager.isThreatListEmpty())
+            if (CanHaveThreatList(true) && !threatManager.IsThreatListEmpty())
                 SendClearThreatList();
-            threatManager.clearReferences();
+            threatManager.ClearReferences();
         }
 
         public void TauntApply(Unit taunter)
@@ -208,7 +208,7 @@ namespace Game.Entities
             if (!target || target != taunter)
                 return;
 
-            if (threatManager.isThreatListEmpty())
+            if (threatManager.IsThreatListEmpty())
             {
                 if (creature.IsAIEnabled)
                     creature.GetAI().EnterEvadeMode(EvadeReason.NoHostiles);
@@ -223,6 +223,24 @@ namespace Game.Entities
                 if (creature.IsAIEnabled)
                     creature.GetAI().AttackStart(target);
             }
+        }
+
+        public void ValidateAttackersAndOwnTarget()
+        {
+            // iterate attackers
+            List<Unit> toRemove = new List<Unit>();
+            foreach (Unit attacker in GetAttackers())
+                if (!attacker.IsValidAttackTarget(this))
+                    toRemove.Add(attacker);
+
+            foreach (Unit attacker in toRemove)
+                attacker.AttackStop();
+
+            // remove our own victim
+            Unit victim = GetVictim();
+            if (victim != null)
+                if (!IsValidAttackTarget(victim))
+                    AttackStop();
         }
 
         public void CombatStop(bool includingCast = false)
@@ -249,7 +267,7 @@ namespace Game.Entities
         }
         public void ClearInCombat()
         {
-            m_CombatTimer = 0;
+            combatTimer = 0;
             RemoveUnitFlag(UnitFlags.InCombat);
 
             // Player's state will be cleared in Player.UpdateContestedPvP
@@ -298,17 +316,17 @@ namespace Game.Entities
             }
         }
 
-        public void addHatedBy(HostileReference pHostileReference)
+        public void AddHatedBy(HostileReference pHostileReference)
         {
-            m_HostileRefManager.InsertFirst(pHostileReference);
+            hostileRefManager.InsertFirst(pHostileReference);
         }
-        public void removeHatedBy(HostileReference pHostileReference) { } //nothing to do yet
+        public void RemoveHatedBy(HostileReference pHostileReference) { } //nothing to do yet
 
         public void AddThreat(Unit victim, float fThreat, SpellSchoolMask schoolMask = SpellSchoolMask.Normal, SpellInfo threatSpell = null)
         {
             // Only mobs can manage threat lists
             if (CanHaveThreatList() && !HasUnitState(UnitState.Evade))
-                threatManager.addThreat(victim, fThreat, schoolMask, threatSpell);
+                threatManager.AddThreat(victim, fThreat, schoolMask, threatSpell);
         }
         public float ApplyTotalThreatModifier(float fThreat, SpellSchoolMask schoolMask = SpellSchoolMask.Normal)
         {
@@ -320,7 +338,7 @@ namespace Game.Entities
             return fThreat * m_threatModifier[(int)school];
         }
 
-        public bool isTargetableForAttack(bool checkFakeDeath = true)
+        public bool IsTargetableForAttack(bool checkFakeDeath = true)
         {
             if (!IsAlive())
                 return false;
@@ -334,7 +352,7 @@ namespace Game.Entities
             return !HasUnitState(UnitState.Unattackable) && (!checkFakeDeath || !HasUnitState(UnitState.Died));
         }
 
-        public DeathState getDeathState()
+        public DeathState GetDeathState()
         {
             return m_deathState;
         }
@@ -374,9 +392,9 @@ namespace Game.Entities
             if (HasAuraType(AuraType.ModUnattackable))
                 RemoveAurasByType(AuraType.ModUnattackable);
 
-            if (m_attacking != null)
+            if (attacking != null)
             {
-                if (m_attacking == victim)
+                if (attacking == victim)
                 {
                     // switch to melee attack from ranged/magic
                     if (meleeAttack)
@@ -403,11 +421,11 @@ namespace Game.Entities
                     ClearUnitState(UnitState.MeleeAttacking);
             }
 
-            if (m_attacking != null)
-                m_attacking._removeAttacker(this);
+            if (attacking != null)
+                attacking._removeAttacker(this);
 
-            m_attacking = victim;
-            m_attacking._addAttacker(this);
+            attacking = victim;
+            attacking._addAttacker(this);
 
             // Set our target
             SetTarget(victim.GetGUID());
@@ -432,8 +450,8 @@ namespace Game.Entities
             }
 
             // delay offhand weapon attack to next attack time
-            if (haveOffhandWeapon() && GetTypeId() != TypeId.Player)
-                resetAttackTimer(WeaponAttackType.OffAttack);
+            if (HaveOffhandWeapon() && GetTypeId() != TypeId.Player)
+                ResetAttackTimer(WeaponAttackType.OffAttack);
 
             if (meleeAttack)
                 SendMeleeAttackStart(victim);
@@ -470,13 +488,13 @@ namespace Game.Entities
         public virtual void SetTarget(ObjectGuid guid) { }
         public bool AttackStop()
         {
-            if (m_attacking == null)
+            if (attacking == null)
                 return false;
 
-            Unit victim = m_attacking;
+            Unit victim = attacking;
 
-            m_attacking._removeAttacker(this);
-            m_attacking = null;
+            attacking._removeAttacker(this);
+            attacking = null;
 
             // Clear our target
             SetTarget(ObjectGuid.Empty);
@@ -511,9 +529,9 @@ namespace Game.Entities
         }
         public Unit GetVictim()
         {
-            return m_attacking;
+            return attacking;
         }
-        public Unit getAttackerForHelper()
+        public Unit GetAttackerForHelper()
         {
             if (GetVictim() != null)
                 return GetVictim();
@@ -523,7 +541,7 @@ namespace Game.Entities
 
             return null;
         }
-        public List<Unit> getAttackers()
+        public List<Unit> GetAttackers()
         {
             return attackerList;
         }
@@ -533,26 +551,26 @@ namespace Game.Entities
         public float GetBoundingRadius() { return m_unitData.BoundingRadius; }
         public void SetBoundingRadius(float boundingRadius) { SetUpdateFieldValue(m_values.ModifyValue(m_unitData).ModifyValue(m_unitData.BoundingRadius), boundingRadius); }
 
-        public bool haveOffhandWeapon()
+        public bool HaveOffhandWeapon()
         {
             if (IsTypeId(TypeId.Player))
                 return ToPlayer().GetWeaponForAttack(WeaponAttackType.OffAttack, true) != null;
             else
                 return m_canDualWield;
         }
-        public void resetAttackTimer(WeaponAttackType type = WeaponAttackType.BaseAttack)
+        public void ResetAttackTimer(WeaponAttackType type = WeaponAttackType.BaseAttack)
         {
             m_attackTimer[(int)type] = (uint)(GetBaseAttackTime(type) * m_modAttackSpeedPct[(int)type]);
         }
-        public void setAttackTimer(WeaponAttackType type, uint time)
+        public void SetAttackTimer(WeaponAttackType type, uint time)
         {
             m_attackTimer[(int)type] = time;
         }
-        public uint getAttackTimer(WeaponAttackType type)
+        public uint GetAttackTimer(WeaponAttackType type)
         {
             return m_attackTimer[(int)type];
         }
-        public bool isAttackReady(WeaponAttackType type = WeaponAttackType.BaseAttack)
+        public bool IsAttackReady(WeaponAttackType type = WeaponAttackType.BaseAttack)
         {
             return m_attackTimer[(int)type] == 0;
         }
@@ -583,7 +601,7 @@ namespace Game.Entities
 
             // melee attack spell casted at main hand attack only - no normal melee dmg dealt
             if (attType == WeaponAttackType.BaseAttack && GetCurrentSpell(CurrentSpellTypes.Melee) != null && !extra)
-                m_currentSpells[CurrentSpellTypes.Melee].cast();
+                m_currentSpells[CurrentSpellTypes.Melee].Cast();
             else
             {
                 // attack can be redirected to another target
@@ -705,10 +723,16 @@ namespace Game.Entities
                     if (spellInfo.CheckExplicitTarget(this, magnet) == SpellCastResult.SpellCastOk && _IsValidAttackTarget(magnet, spellInfo))
                     {
                         // @todo handle this charge drop by proc in cast phase on explicit target
-                        if (spellInfo.Speed > 0.0f)
+                        if (spellInfo.HasHitDelay())
                         {
                             // Set up missile speed based delay
-                            uint delay = (uint)Math.Floor(Math.Max(victim.GetDistance(this), 5.0f) / spellInfo.Speed * 1000.0f);
+                            float hitDelay = spellInfo.LaunchDelay;
+                            if (spellInfo.HasAttribute(SpellAttr9.SpecialDelayCalculation))
+                                hitDelay += spellInfo.Speed;
+                            else if (spellInfo.Speed > 0.0f)
+                                hitDelay += Math.Max(victim.GetDistance(this), 5.0f) / spellInfo.Speed;
+
+                            uint delay = (uint)Math.Floor(hitDelay * 1000.0f);
                             // Schedule charge drop
                             eff.GetBase().DropChargeDelayed(delay, AuraRemoveMode.Expire);
                         }
@@ -779,19 +803,19 @@ namespace Game.Entities
                 (!IsTypeId(TypeId.Unit) || !ToCreature().GetCreatureTemplate().FlagsExtra.HasAnyFlag(CreatureFlagsExtra.NoParryHasten)))
             {
                 // Get attack timers
-                float offtime = victim.getAttackTimer(WeaponAttackType.OffAttack);
-                float basetime = victim.getAttackTimer(WeaponAttackType.BaseAttack);
+                float offtime = victim.GetAttackTimer(WeaponAttackType.OffAttack);
+                float basetime = victim.GetAttackTimer(WeaponAttackType.BaseAttack);
                 // Reduce attack time
-                if (victim.haveOffhandWeapon() && offtime < basetime)
+                if (victim.HaveOffhandWeapon() && offtime < basetime)
                 {
                     float percent20 = victim.GetBaseAttackTime(WeaponAttackType.OffAttack) * 0.20f;
                     float percent60 = 3.0f * percent20;
                     if (offtime > percent20 && offtime <= percent60)
-                        victim.setAttackTimer(WeaponAttackType.OffAttack, (uint)percent20);
+                        victim.SetAttackTimer(WeaponAttackType.OffAttack, (uint)percent20);
                     else if (offtime > percent60)
                     {
                         offtime -= 2.0f * percent20;
-                        victim.setAttackTimer(WeaponAttackType.OffAttack, (uint)offtime);
+                        victim.SetAttackTimer(WeaponAttackType.OffAttack, (uint)offtime);
                     }
                 }
                 else
@@ -799,11 +823,11 @@ namespace Game.Entities
                     float percent20 = victim.GetBaseAttackTime(WeaponAttackType.BaseAttack) * 0.20f;
                     float percent60 = 3.0f * percent20;
                     if (basetime > percent20 && basetime <= percent60)
-                        victim.setAttackTimer(WeaponAttackType.BaseAttack, (uint)percent20);
+                        victim.SetAttackTimer(WeaponAttackType.BaseAttack, (uint)percent20);
                     else if (basetime > percent60)
                     {
                         basetime -= 2.0f * percent20;
-                        victim.setAttackTimer(WeaponAttackType.BaseAttack, (uint)basetime);
+                        victim.SetAttackTimer(WeaponAttackType.BaseAttack, (uint)basetime);
                     }
                 }
             }
@@ -815,14 +839,14 @@ namespace Game.Entities
             // If this is a creature and it attacks from behind it has a probability to daze it's victim
             if ((damageInfo.hitOutCome == MeleeHitOutcome.Crit || damageInfo.hitOutCome == MeleeHitOutcome.Crushing || damageInfo.hitOutCome == MeleeHitOutcome.Normal || damageInfo.hitOutCome == MeleeHitOutcome.Glancing) &&
                 !IsTypeId(TypeId.Player) && !ToCreature().IsControlledByPlayer() && !victim.HasInArc(MathFunctions.PI, this)
-                && (victim.IsTypeId(TypeId.Player) || !victim.ToCreature().isWorldBoss()) && !victim.IsVehicle())
+                && (victim.IsTypeId(TypeId.Player) || !victim.ToCreature().IsWorldBoss()) && !victim.IsVehicle())
             {
                 // -probability is between 0% and 40%
                 // 20% base chance
                 float Probability = 20.0f;
 
                 // there is a newbie protection, at level 10 just 7% base chance; assuming linear function
-                if (victim.getLevel() < 30)
+                if (victim.GetLevel() < 30)
                     Probability = 0.65f * victim.GetLevelForTarget(this) + 0.5f;
 
                 uint VictimDefense = victim.GetMaxSkillValueForLevel(this);
@@ -951,7 +975,7 @@ namespace Game.Entities
                         Spell spell = victim.GetCurrentSpell(CurrentSpellTypes.Generic);
                         if (spell)
                         {
-                            if (spell.getState() == SpellState.Preparing)
+                            if (spell.GetState() == SpellState.Preparing)
                             {
                                 SpellInterruptFlags interruptFlags = spell.m_spellInfo.InterruptFlags;
                                 if (interruptFlags.HasAnyFlag(SpellInterruptFlags.AbortOnDmg))
@@ -1052,7 +1076,7 @@ namespace Game.Entities
             }
             else if (!victim.IsControlledByPlayer() || victim.IsVehicle())
             {
-                if (!victim.ToCreature().hasLootRecipient())
+                if (!victim.ToCreature().HasLootRecipient())
                     victim.ToCreature().SetLootRecipient(this);
 
                 if (IsControlledByPlayer())
@@ -1086,7 +1110,7 @@ namespace Game.Entities
                 {
                     // Part of Evade mechanics. DoT's and Thorns / Retribution Aura do not contribute to this
                     if (damagetype != DamageEffectType.DOT && damage > 0 && !victim.GetOwnerGUID().IsPlayer() && (spellProto == null || !spellProto.HasAura(GetMap().GetDifficultyID(), AuraType.DamageShield)))
-                        victim.ToCreature().SetLastDamagedTime(Global.WorldMgr.GetGameTime() + SharedConst.MaxAggroResetTime);
+                        victim.ToCreature().SetLastDamagedTime(GameTime.GetGameTime() + SharedConst.MaxAggroResetTime);
 
                     victim.AddThreat(this, damage, damageSchoolMask, spellProto);
                 }
@@ -1119,7 +1143,7 @@ namespace Game.Entities
                         {
                             Spell spell = victim.GetCurrentSpell(CurrentSpellTypes.Generic);
                             if (spell != null)
-                                if (spell.getState() == SpellState.Preparing)
+                                if (spell.GetState() == SpellState.Preparing)
                                 {
                                     var interruptFlags = spell.m_spellInfo.InterruptFlags;
                                     if (interruptFlags.HasAnyFlag(SpellInterruptFlags.AbortOnDmg))
@@ -1130,7 +1154,7 @@ namespace Game.Entities
                         }
                         Spell spell1 = victim.GetCurrentSpell(CurrentSpellTypes.Channeled);
                         if (spell1 != null)
-                            if (spell1.getState() == SpellState.Casting && spell1.m_spellInfo.HasChannelInterruptFlag(SpellChannelInterruptFlags.Delay) && damagetype != DamageEffectType.DOT)
+                            if (spell1.GetState() == SpellState.Casting && spell1.m_spellInfo.HasChannelInterruptFlag(SpellChannelInterruptFlags.Delay) && damagetype != DamageEffectType.DOT)
                                 spell1.DelayedChannel();
                     }
                 }
@@ -1328,7 +1352,7 @@ namespace Game.Entities
 
             if (PvP)
             { 
-                m_CombatTimer = 5000;
+                combatTimer = 5000;
                 Player me = ToPlayer();
                 if (me)
                     me.EnablePvpRules(true);
@@ -1450,13 +1474,13 @@ namespace Game.Entities
                 {
                     Loot loot = creature.loot;
 
-                    loot.clear();
+                    loot.Clear();
                     uint lootid = creature.GetCreatureTemplate().LootId;
                     if (lootid != 0)
-                        loot.FillLoot(lootid, LootStorage.Creature, looter, false, false, creature.GetLootMode());
+                        loot.FillLoot(lootid, LootStorage.Creature, looter, false, false, creature.GetLootMode(), GetMap().GetDifficultyLootItemContext());
 
                     if (creature.GetLootMode() > 0)
-                        loot.generateMoneyLoot(creature.GetCreatureTemplate().MinGold, creature.GetCreatureTemplate().MaxGold);
+                        loot.GenerateMoneyLoot(creature.GetCreatureTemplate().MinGold, creature.GetCreatureTemplate().MaxGold);
 
                     if (group)
                     {
@@ -1466,7 +1490,7 @@ namespace Game.Entities
                             group.SendLooter(creature, null);
 
                         // Update round robin looter only if the creature had loot
-                        if (!loot.empty())
+                        if (!loot.Empty())
                             group.UpdateLooterGuid(creature);
                     }
                 }
@@ -1495,7 +1519,7 @@ namespace Game.Entities
                 player.UpdateCriteria(CriteriaTypes.GetKillingBlows, 1, 0, 0, victim);
 
             Log.outDebug(LogFilter.Unit, "SET JUST_DIED");
-            victim.setDeathState(DeathState.JustDied);
+            victim.SetDeathState(DeathState.JustDied);
 
             // Inform pets (if any) when player kills target)
             // MUST come after victim.setDeathState(JUST_DIED); or pet next target
@@ -1503,7 +1527,7 @@ namespace Game.Entities
             if (player != null)
             {
                 Pet pet = player.GetPet();
-                if (pet != null && pet.IsAlive() && pet.isControlled())
+                if (pet != null && pet.IsAlive() && pet.IsControlled())
                     pet.GetAI().KilledUnit(victim);
             }
 
@@ -1548,7 +1572,7 @@ namespace Game.Entities
                     creature.DeleteThreatList();
 
                     // must be after setDeathState which resets dynamic flags
-                    if (!creature.loot.isLooted())
+                    if (!creature.loot.IsLooted())
                         creature.AddDynamicFlag(UnitDynFlags.Lootable);
                     else
                         creature.AllLootRemovedFromCorpse();
@@ -1774,7 +1798,7 @@ namespace Game.Entities
             List<Unit> nearMembers = new List<Unit>();
             // reserve place for players and pets because resizing vector every unit push is unefficient (vector is reallocated then)
 
-            for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.next())
+            for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.Next())
             {
                 Player target = refe.GetSource();
                 if (target)
@@ -1951,7 +1975,7 @@ namespace Game.Entities
                     damageInfo.HitInfo |= HitInfo.Block;
                     damageInfo.originalDamage = damageInfo.damage;
                     // 30% damage blocked, double blocked amount if block is critical
-                    damageInfo.blocked_amount = MathFunctions.CalculatePct(damageInfo.damage, damageInfo.target.isBlockCritical() ? damageInfo.target.GetBlockPercent() * 2 : damageInfo.target.GetBlockPercent());
+                    damageInfo.blocked_amount = MathFunctions.CalculatePct(damageInfo.damage, damageInfo.target.IsBlockCritical() ? damageInfo.target.GetBlockPercent() * 2 : damageInfo.target.GetBlockPercent());
                     damageInfo.damage -= damageInfo.blocked_amount;
                     damageInfo.cleanDamage += damageInfo.blocked_amount;
                     break;
@@ -1959,7 +1983,7 @@ namespace Game.Entities
                     damageInfo.HitInfo |= HitInfo.Glancing;
                     damageInfo.TargetState = VictimState.Hit;
                     damageInfo.originalDamage = damageInfo.damage;
-                    int leveldif = (int)victim.getLevel() - (int)getLevel();
+                    int leveldif = (int)victim.GetLevel() - (int)GetLevel();
                     if (leveldif > 3)
                         leveldif = 3;
 
@@ -2183,7 +2207,7 @@ namespace Game.Entities
         }
         public float GetWeaponDamageRange(WeaponAttackType attType, WeaponDamageRange type)
         {
-            if (attType == WeaponAttackType.OffAttack && !haveOffhandWeapon())
+            if (attType == WeaponAttackType.OffAttack && !HaveOffhandWeapon())
                 return 0.0f;
 
             return m_weaponDamage[(int)attType][(int)type];
@@ -2948,7 +2972,7 @@ namespace Game.Entities
             return (uint)Math.Max(tmpDamage, 0.0f);
         }
 
-        bool isBlockCritical()
+        bool IsBlockCritical()
         {
             if (RandomHelper.randChance(GetTotalAuraModifier(AuraType.ModBlockCritChance)))
                 return true;
@@ -3032,7 +3056,7 @@ namespace Game.Entities
 
             // visibility checks
             // skip visibility check for GO casts, needs removal when go cast is implemented. Also ignore for gameobject and dynauras
-            if (GetEntry() != SharedConst.WorldTrigger && (!obj || !obj.isTypeMask(TypeMask.GameObject | TypeMask.DynamicObject)))
+            if (GetEntry() != SharedConst.WorldTrigger && (!obj || !obj.IsTypeMask(TypeMask.GameObject | TypeMask.DynamicObject)))
             {
                 // can't attack invisible
                 if (bySpell == null || !bySpell.HasAttribute(SpellAttr6.CanTargetInvisible))
@@ -3147,7 +3171,7 @@ namespace Game.Entities
             return true;
         }
 
-        bool IsValidAssistTarget(Unit target)
+        public bool IsValidAssistTarget(Unit target)
         {
             return _IsValidAssistTarget(target, null);
         }

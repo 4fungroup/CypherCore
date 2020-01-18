@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -269,7 +269,7 @@ namespace Scripts.Northrend.Nexus.Nexus
             while (time[i] != 0)
                 ++i;
 
-            time[i] = Global.WorldMgr.GetGameTime();
+            time[i] = GameTime.GetGameTime();
             if (i == 2 && (time[2] - time[1] < 5) && (time[1] - time[0] < 5))
                 ++splitPersonality;
         }

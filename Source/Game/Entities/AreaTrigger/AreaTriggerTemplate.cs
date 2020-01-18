@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -182,39 +182,35 @@ namespace Game.Entities
             switch (TriggerType)
             {
                 case AreaTriggerTypes.Sphere:
-                {
-                    MaxSearchRadius = Math.Max(SphereDatas.Radius, SphereDatas.RadiusTarget);
-                    break;
-                }
+                    {
+                        MaxSearchRadius = Math.Max(SphereDatas.Radius, SphereDatas.RadiusTarget);
+                        break;
+                    }
                 case AreaTriggerTypes.Box:
-                {
-                    fixed (float* ptr = BoxDatas.Extents)
                     {
-                        MaxSearchRadius = (float) Math.Sqrt(ptr[0] * ptr[0] / 4 + ptr[1] * ptr[1] / 4);
+                        MaxSearchRadius = (float)Math.Sqrt(BoxDatas.Extents[0] * BoxDatas.Extents[0] / 4 + BoxDatas.Extents[1] * BoxDatas.Extents[1] / 4);
+                        break;
                     }
-
-                    break;
-                }
                 case AreaTriggerTypes.Polygon:
-                {
-                    if (PolygonDatas.Height <= 0.0f)
-                        PolygonDatas.Height = 1.0f;
-
-                    foreach (Vector2 vertice in PolygonVertices)
                     {
-                        float pointDist = vertice.GetLength();
+                        if (PolygonDatas.Height <= 0.0f)
+                            PolygonDatas.Height = 1.0f;
 
-                        if (pointDist > MaxSearchRadius)
-                            MaxSearchRadius = pointDist;
+                        foreach (Vector2 vertice in PolygonVertices)
+                        {
+                            float pointDist = vertice.GetLength();
+
+                            if (pointDist > MaxSearchRadius)
+                                MaxSearchRadius = pointDist;
+                        }
+
+                        break;
                     }
-
-                    break;
-                }
                 case AreaTriggerTypes.Cylinder:
-                {
-                    MaxSearchRadius = CylinderDatas.Radius;
-                    break;
-                }
+                    {
+                        MaxSearchRadius = CylinderDatas.Radius;
+                        break;
+                    }
                 default:
                     break;
             }

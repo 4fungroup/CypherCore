@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,12 +32,12 @@ namespace Game.Spells
 {
     public class AuraEffect
     {
-        public AuraEffect(Aura abase, uint effindex, int? baseAmount, Unit caster)
+        public AuraEffect(Aura baseAura, uint effindex, int? baseAmount, Unit caster)
         {
-            auraBase = abase;
-            m_spellInfo = abase.GetSpellInfo();
-            _effectInfo = abase.GetSpellEffectInfo(effindex);
-            m_baseAmount = baseAmount.HasValue ? baseAmount.Value : _effectInfo.CalcBaseValue(caster, abase.GetAuraType() == AuraObjectType.Unit ? abase.GetOwner().ToUnit() : null, abase.GetCastItemLevel());
+            auraBase = baseAura;
+            m_spellInfo = baseAura.GetSpellInfo();
+            _effectInfo = baseAura.GetSpellEffectInfo(effindex);
+            m_baseAmount = baseAmount.HasValue ? baseAmount.Value : _effectInfo.CalcBaseValue(caster, baseAura.GetAuraType() == AuraObjectType.Unit ? baseAura.GetOwner().ToUnit() : null, baseAura.GetCastItemId(), baseAura.GetCastItemLevel());
             m_donePct = 1.0f;
             m_effIndex = (byte)effindex;
             m_canBeRecalculated = true;
@@ -76,7 +76,7 @@ namespace Game.Spells
             int amount = 0;
 
             if (!m_spellInfo.HasAttribute(SpellAttr8.MasterySpecialization) || MathFunctions.fuzzyEq(GetSpellEffectInfo().BonusCoefficient, 0.0f))
-                amount = GetSpellEffectInfo().CalcValue(caster, m_baseAmount, GetBase().GetOwner().ToUnit(), GetBase().GetCastItemLevel());
+                amount = GetSpellEffectInfo().CalcValue(caster, m_baseAmount, GetBase().GetOwner().ToUnit(), GetBase().GetCastItemId(), GetBase().GetCastItemLevel());
             else if (caster != null && caster.IsTypeId(TypeId.Player))
                 amount = (int)(caster.ToPlayer().m_activePlayerData.Mastery * GetSpellEffectInfo().BonusCoefficient);
 
@@ -238,9 +238,14 @@ namespace Game.Spells
             List<AuraApplication> effectApplications = new List<AuraApplication>();
             GetApplicationList(out effectApplications);
 
-            foreach (var appt in effectApplications)
-                if (appt.HasEffect(GetEffIndex()))
-                    HandleEffect(appt, handleMask, false);
+            foreach (var aurApp in effectApplications)
+            {
+                if (aurApp.HasEffect(GetEffIndex()))
+                {
+                    aurApp.GetTarget()._RegisterAuraEffect(this, false);
+                    HandleEffect(aurApp, handleMask, false);
+                }
+            }
 
             if (Convert.ToBoolean(handleMask & AuraEffectHandleModes.ChangeAmount))
             {
@@ -251,9 +256,14 @@ namespace Game.Spells
                 CalculateSpellMod();
             }
 
-            foreach (var appt in effectApplications)
-                if (appt.HasEffect(GetEffIndex()))
-                    HandleEffect(appt, handleMask, true);
+            foreach (var aurApp in effectApplications)
+            {
+                if (aurApp.HasEffect(GetEffIndex()))
+                {
+                    aurApp.GetTarget()._RegisterAuraEffect(this, true);
+                    HandleEffect(aurApp, handleMask, true);
+                }
+            }
 
             if (GetSpellInfo().HasAttribute(SpellAttr8.AuraSendAmount))
                 GetBase().SetNeedClientUpdateForTargets();
@@ -680,7 +690,7 @@ namespace Game.Spells
                         uint triggerSpellId = GetSpellEffectInfo().TriggerSpell;
                         SpellInfo triggeredSpellInfo = Global.SpellMgr.GetSpellInfo(triggerSpellId);
                         if (triggeredSpellInfo != null)
-                            if (aurApp.GetTarget().m_extraAttacks != 0 && triggeredSpellInfo.HasEffect(SpellEffectName.AddExtraAttacks))
+                            if (aurApp.GetTarget().ExtraAttacks != 0 && triggeredSpellInfo.HasEffect(SpellEffectName.AddExtraAttacks))
                                 return false;
                         break;
                     }
@@ -1206,7 +1216,7 @@ namespace Game.Spells
             // die at aura end
             else if (target.IsAlive())
                 // call functions which may have additional effects after chainging state of unit
-                target.setDeathState(DeathState.JustDied);
+                target.SetDeathState(DeathState.JustDied);
         }
 
         [AuraEffectHandler(AuraType.Ghost)]
@@ -1292,8 +1302,7 @@ namespace Game.Spells
 
             Unit target = aurApp.GetTarget();
             ShapeShiftForm form = (ShapeShiftForm)GetMiscValue();
-
-            uint modelid = target.GetModelForForm(form);
+            uint modelid = target.GetModelForForm(form, GetId());
 
             if (apply)
             {
@@ -1433,9 +1442,11 @@ namespace Game.Spells
 
             if (apply)
             {
-                // update active transform spell only when transform or shapeshift not set or not overwriting negative by positive case
-                if (target.GetModelForForm(target.GetShapeshiftForm()) == 0 || !GetSpellInfo().IsPositive())
+                // update active transform spell only when transform not set or not overwriting negative by positive case
+                SpellInfo transformSpellInfo = Global.SpellMgr.GetSpellInfo(target.GetTransForm());
+                if (transformSpellInfo == null || !GetSpellInfo().IsPositive() || transformSpellInfo.IsPositive())
                 {
+                    target.SetTransForm(GetId());
                     // special case (spell specific functionality)
                     if (GetMiscValue() == 0)
                     {
@@ -1598,18 +1609,13 @@ namespace Game.Spells
                     }
                 }
 
-                // update active transform spell only when transform or shapeshift not set or not overwriting negative by positive case
-                SpellInfo transformSpellInfo = Global.SpellMgr.GetSpellInfo(target.GetTransForm());
-                if (transformSpellInfo == null || !GetSpellInfo().IsPositive() || transformSpellInfo.IsPositive())
-                    target.setTransForm(GetId());
-
                 // polymorph case
                 if (mode.HasAnyFlag(AuraEffectHandleModes.Real) && target.IsTypeId(TypeId.Player) && target.IsPolymorphed())
                 {
                     // for players, start regeneration after 1s (in polymorph fast regeneration case)
                     // only if caster is Player (after patch 2.4.2)
                     if (GetCasterGUID().IsPlayer())
-                        target.ToPlayer().setRegenTimerCount(1 * Time.InMilliseconds);
+                        target.ToPlayer().SetRegenTimerCount(1 * Time.InMilliseconds);
 
                     //dismount polymorphed target (after patch 2.4.2)
                     if (target.IsMounted())
@@ -1619,7 +1625,7 @@ namespace Game.Spells
             else
             {
                 if (target.GetTransForm() == GetId())
-                    target.setTransForm(0);
+                    target.SetTransForm(0);
 
                 target.RestoreDisplayId(target.IsMounted());
 
@@ -1721,7 +1727,7 @@ namespace Game.Spells
                 if (GetCasterGUID() == target.GetGUID() && target.GetCurrentSpell(CurrentSpellTypes.Generic) != null)
                     target.FinishSpell(CurrentSpellTypes.Generic, false);
                 target.InterruptNonMeleeSpells(true);
-                target.getHostileRefManager().deleteReferences();
+                target.GetHostileRefManager().DeleteReferences();
 
                 // stop handling the effect if it was removed by linked event
                 if (aurApp.HasRemoveMode())
@@ -2324,6 +2330,23 @@ namespace Game.Spells
             target.SetCanTurnWhileFalling(apply);
         }
 
+        [AuraEffectHandler(AuraType.IgnoreMovementForces)]
+        void HandleIgnoreMovementForces(AuraApplication aurApp, AuraEffectHandleModes mode, bool apply)
+        {
+            if (!mode.HasAnyFlag(AuraEffectHandleModes.SendForClientMask))
+                return;
+
+            Unit target = aurApp.GetTarget();
+            if (!apply)
+            {
+                // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
+                if (target.HasAuraType(GetAuraType()))
+                    return;
+            }
+
+            target.SetIgnoreMovementForces(apply);
+        }
+
         /****************************/
         /***        THREAT        ***/
         /****************************/
@@ -2352,7 +2375,7 @@ namespace Game.Spells
 
             Unit caster = GetCaster();
             if (caster != null && caster.IsAlive())
-                target.getHostileRefManager().addTempThreat(GetAmount(), apply);
+                target.GetHostileRefManager().AddTempThreat(GetAmount(), apply);
         }
 
         [AuraEffectHandler(AuraType.ModTaunt)]
@@ -2714,6 +2737,15 @@ namespace Game.Spells
             Unit target = aurApp.GetTarget();
 
             target.UpdateSpeed(UnitMoveType.Run);
+        }
+
+        [AuraEffectHandler(AuraType.ModMovementForceMagnitude)]
+        void HandleModMovementForceMagnitude(AuraApplication aurApp, AuraEffectHandleModes mode, bool apply)
+        {
+            if (!mode.HasAnyFlag(AuraEffectHandleModes.ChangeAmountMask))
+                return;
+
+            aurApp.GetTarget().UpdateMovementForcesModMagnitude();
         }
 
         /*********************************************************/
@@ -3125,7 +3157,13 @@ namespace Game.Spells
 
             // save current health state
             float healthPct = target.GetHealthPct();
-            bool alive = target.IsAlive();
+            bool zeroHealth = !target.IsAlive();
+
+            // players in corpse state may mean two different states:
+            /// 1. player just died but did not release (in this case health == 0)
+            /// 2. player is corpse running (ie ghost) (in this case health == 1)
+            if (target.GetDeathState() == DeathState.Corpse)
+                zeroHealth = target.GetHealth() == 0;
 
             for (int i = (int)Stats.Strength; i < (int)Stats.Max; i++)
             {
@@ -3151,7 +3189,7 @@ namespace Game.Spells
             // recalculate current HP/MP after applying aura modifications (only for spells with SPELL_ATTR0_UNK4 0x00000010 flag)
             // this check is total bullshit i think
             if (Convert.ToBoolean(GetMiscValueB() & 1 << (int)Stats.Stamina) && m_spellInfo.HasAttribute(SpellAttr0.Ability))
-                target.SetHealth((uint)Math.Max((healthPct * target.GetMaxHealth() * 0.01f), (alive ? 1 : 0)));
+                target.SetHealth(Math.Max(MathFunctions.CalculatePct(target.GetMaxHealth(), healthPct), (zeroHealth ? 0 : 1ul)));
         }
 
         [AuraEffectHandler(AuraType.ModResistanceOfStatPercent)]
@@ -3602,8 +3640,8 @@ namespace Game.Spells
             }
             else
             {
-                target.m_modMeleeHitChance += (apply) ? GetAmount() : (-GetAmount());
-                target.m_modRangedHitChance += (apply) ? GetAmount() : (-GetAmount());
+                target.ModMeleeHitChance += (apply) ? GetAmount() : (-GetAmount());
+                target.ModRangedHitChance += (apply) ? GetAmount() : (-GetAmount());
             }
         }
 
@@ -3618,7 +3656,7 @@ namespace Game.Spells
             if (target.IsTypeId(TypeId.Player))
                 target.ToPlayer().UpdateSpellHitChances();
             else
-                target.m_modSpellHitChance += (apply) ? GetAmount() : (-GetAmount());
+                target.ModSpellHitChance += (apply) ? GetAmount() : (-GetAmount());
         }
 
         [AuraEffectHandler(AuraType.ModSpellCritChance)]
@@ -3632,7 +3670,7 @@ namespace Game.Spells
             if (target.IsTypeId(TypeId.Player))
                 target.ToPlayer().UpdateSpellCritChance();
             else
-                target.m_baseSpellCritChance += (apply) ? GetAmount() : -GetAmount();
+                target.BaseSpellCritChance += (apply) ? GetAmount() : -GetAmount();
         }
 
         [AuraEffectHandler(AuraType.ModCritPct)]
@@ -3645,7 +3683,7 @@ namespace Game.Spells
 
             if (!target.IsTypeId(TypeId.Player))
             {
-                target.m_baseSpellCritChance += (apply) ? GetAmount() : -GetAmount();
+                target.BaseSpellCritChance += (apply) ? GetAmount() : -GetAmount();
                 return;
             }
 
@@ -3836,7 +3874,7 @@ namespace Game.Spells
 
             Unit target = aurApp.GetTarget();
 
-            if ((target.getClassMask() & (uint)Class.ClassMaskWandUsers) != 0)
+            if ((target.GetClassMask() & (uint)Class.ClassMaskWandUsers) != 0)
                 return;
 
             target.HandleStatModifier(UnitMods.AttackPowerRanged, UnitModifierType.TotalValue, GetAmount(), apply);
@@ -3862,24 +3900,11 @@ namespace Game.Spells
 
             Unit target = aurApp.GetTarget();
 
-            if ((target.getClassMask() & (uint)Class.ClassMaskWandUsers) != 0)
+            if ((target.GetClassMask() & (uint)Class.ClassMaskWandUsers) != 0)
                 return;
 
             //UNIT_FIELD_RANGED_ATTACK_POWER_MULTIPLIER = multiplier - 1
             target.HandleStatModifier(UnitMods.AttackPowerRanged, UnitModifierType.TotalPCT, GetAmount(), apply);
-        }
-
-        [AuraEffectHandler(AuraType.ModAttackPowerOfArmor)]
-        void HandleAuraModAttackPowerOfArmor(AuraApplication aurApp, AuraEffectHandleModes mode, bool apply)
-        {
-            if (!mode.HasAnyFlag((AuraEffectHandleModes.ChangeAmountMask | AuraEffectHandleModes.Stat)))
-                return;
-
-            Unit target = aurApp.GetTarget();
-
-            // Recalculate bonus
-            if (target.IsTypeId(TypeId.Player))
-                target.ToPlayer().UpdateAttackPowerAndDamage(false);
         }
 
         /********************************/
@@ -4447,8 +4472,8 @@ namespace Game.Spells
             if (GetSpellEffectInfo().ItemType == 6265)
             {
                 // Soul Shard only from units that grant XP or honor
-                if (!plCaster.isHonorOrXPTarget(target) ||
-                    (target.IsTypeId(TypeId.Unit) && !target.ToCreature().isTappedBy(plCaster)))
+                if (!plCaster.IsHonorOrXPTarget(target) ||
+                    (target.IsTypeId(TypeId.Unit) && !target.ToCreature().IsTappedBy(plCaster)))
                     return;
             }
 
@@ -4993,7 +5018,7 @@ namespace Game.Spells
                                             if (creature.GetCreatureTemplate().SkinLootId == 0)
                                                 return;
 
-                                            player.AutoStoreLoot(creature.GetCreatureTemplate().SkinLootId, LootStorage.Skinning, true);
+                                            player.AutoStoreLoot(creature.GetCreatureTemplate().SkinLootId, LootStorage.Skinning, ItemContext.None, true);
 
                                             creature.DespawnOrUnsummon();
                                         }
@@ -5199,7 +5224,7 @@ namespace Game.Spells
             {
                 Creature c = target.ToCreature();
                 if (c == null || caster == null || !Global.ScriptMgr.OnDummyEffect(caster, GetId(), GetEffIndex(), target.ToCreature()) ||
-                    !c.GetAI().sOnDummyEffect(caster, GetId(), GetEffIndex()))
+                    !c.GetAI().OnDummyEffect(caster, GetId(), GetEffIndex()))
                     Log.outDebug(LogFilter.Spells, "AuraEffect.HandlePeriodicTriggerSpellAuraTick: Spell {0} has non-existent spell {1} in EffectTriggered[{2}] and is therefor not triggered.", GetId(), triggerSpellId, GetEffIndex());
             }
         }
@@ -5300,7 +5325,7 @@ namespace Game.Spells
                 // There is a Chance to make a Soul Shard when Drain soul does damage
                 if (GetSpellInfo().SpellFamilyName == SpellFamilyNames.Warlock && GetSpellInfo().SpellFamilyFlags[0].HasAnyFlag(0x00004000u))
                 {
-                    if (caster.IsTypeId(TypeId.Player) && caster.ToPlayer().isHonorOrXPTarget(target))
+                    if (caster.IsTypeId(TypeId.Player) && caster.ToPlayer().IsHonorOrXPTarget(target))
                         caster.CastSpell(caster, 95810, true, null, this);
                 }
                 if (GetSpellInfo().SpellFamilyName == SpellFamilyNames.Generic)
@@ -5318,8 +5343,8 @@ namespace Game.Spells
                     }
                 }
             }
-            else
-                damage = (uint)target.CountPctFromMaxHealth((int)damage);
+            else // ceil obtained value, it may happen that 10 ticks for 10% damage may not kill owner
+                damage = (uint)Math.Ceiling((float)MathFunctions.CalculatePct(target.GetMaxHealth(), damage));
 
             if (!m_spellInfo.HasAttribute(SpellAttr4.FixedDamage))
             {
@@ -5473,7 +5498,7 @@ namespace Game.Spells
                 HealInfo healInfo = new HealInfo(caster, caster, heal, GetSpellInfo(), GetSpellInfo().GetSchoolMask());
                 caster.HealBySpell(healInfo);
 
-                caster.getHostileRefManager().threatAssist(caster, healInfo.GetEffectiveHeal() * 0.5f, GetSpellInfo());
+                caster.GetHostileRefManager().ThreatAssist(caster, healInfo.GetEffectiveHeal() * 0.5f, GetSpellInfo());
                 caster.ProcSkillsAndAuras(caster, ProcFlags.DonePeriodic, ProcFlags.TakenPeriodic, ProcFlagsSpellType.Heal, ProcFlagsSpellPhase.None, hitMask, null, null, healInfo);
             }
 
@@ -5596,7 +5621,7 @@ namespace Game.Spells
             SpellPeriodicAuraLogInfo pInfo = new SpellPeriodicAuraLogInfo(this, heal, (uint)damage, heal - healInfo.GetEffectiveHeal(), healInfo.GetAbsorb(), 0, 0.0f, crit);
             target.SendPeriodicAuraLog(pInfo);
 
-            target.getHostileRefManager().threatAssist(caster, healInfo.GetEffectiveHeal() * 0.5f, GetSpellInfo());
+            target.GetHostileRefManager().ThreatAssist(caster, healInfo.GetEffectiveHeal() * 0.5f, GetSpellInfo());
 
             // %-based heal - does not proc auras
             if (GetAuraType() == AuraType.ObsModHealth)
@@ -5690,7 +5715,7 @@ namespace Game.Spells
             int gain = target.ModifyPower(powerType, amount);
 
             if (caster != null)
-                target.getHostileRefManager().threatAssist(caster, gain * 0.5f, GetSpellInfo());
+                target.GetHostileRefManager().ThreatAssist(caster, gain * 0.5f, GetSpellInfo());
 
             target.SendPeriodicAuraLog(pInfo);
         }
@@ -5718,7 +5743,7 @@ namespace Game.Spells
             int gain = target.ModifyPower(powerType, amount);
 
             if (caster != null)
-                target.getHostileRefManager().threatAssist(caster, gain * 0.5f, GetSpellInfo());
+                target.GetHostileRefManager().ThreatAssist(caster, gain * 0.5f, GetSpellInfo());
 
             target.SendPeriodicAuraLog(pInfo);
         }
@@ -5754,7 +5779,7 @@ namespace Game.Spells
             // Set trigger flag
             ProcFlags procAttacker = ProcFlags.DonePeriodic;
             ProcFlags procVictim = ProcFlags.TakenPeriodic;
-            ProcFlagsHit hitMask = Unit.createProcHitMask(damageInfo, SpellMissInfo.None);
+            ProcFlagsHit hitMask = Unit.CreateProcHitMask(damageInfo, SpellMissInfo.None);
             ProcFlagsSpellType spellTypeMask = ProcFlagsSpellType.NoDmgHeal;
             if (damageInfo.damage != 0)
             {
@@ -6015,7 +6040,7 @@ namespace Game.Spells
                         uint summonEntry = (uint)spellEffect.MiscValue;
                         if (summonEntry != 0)
                             summonedEntries.Add(summonEntry);
-                        
+
                     }
                 }
 

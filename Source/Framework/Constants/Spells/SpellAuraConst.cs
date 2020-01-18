@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -306,7 +306,7 @@ namespace Framework.Constants
         ModBaseHealthPct = 282,
         ModHealingReceived = 283,  // Possibly Only For Some Spell Family Class Spells
         Linked = 284,
-        ModAttackPowerOfArmor = 285,
+        Linked2 = 285,
         AbilityPeriodicCrit = 286,
         DeflectSpells = 287,
         IgnoreHitDirection = 288,
@@ -346,7 +346,7 @@ namespace Framework.Constants
         InterfereTargetting = 322,
         Unk323 = 323,  // Not Used In 4.3.4
         Unk324 = 324,  // Spell Critical Chance (Probably By School Mask)
-        Unk325 = 325,  // Not Used In 4.3.4
+        LearnPvpTalent = 325,  // NYI
         PhaseGroup = 326,  // Phase Related
         Unk327 = 327,  // Not Used In 4.3.4
         TriggerSpellOnPowerPct = 328,
@@ -506,7 +506,7 @@ namespace Framework.Constants
         Unk482 = 482,
         SuppressTransforms = 483, // NYI
         Unk484 = 484,
-        Unk485 = 485,
+        ModMovementForceMagnitude = 485,
         Unk486 = 486,
         Unk487 = 487,
         Unk488 = 488,

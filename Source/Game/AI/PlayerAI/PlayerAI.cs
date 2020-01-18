@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -569,7 +569,7 @@ namespace Game.AI
         {
             SpellCastTargets targets = new SpellCastTargets();
             targets.SetUnitTarget(spell.Item2);
-            spell.Item1.prepare(targets);
+            spell.Item1.Prepare(targets);
         }
 
         void DoRangedAttackIfReady()
@@ -577,7 +577,7 @@ namespace Game.AI
             if (me.HasUnitState(UnitState.Casting))
                 return;
 
-            if (!me.isAttackReady(WeaponAttackType.RangedAttack))
+            if (!me.IsAttackReady(WeaponAttackType.RangedAttack))
                 return;
 
             Unit victim = me.GetVictim();
@@ -610,7 +610,7 @@ namespace Game.AI
                 return;
 
             me.CastSpell(victim, rangedAttackSpell, TriggerCastFlags.CastDirectly);
-            me.resetAttackTimer(WeaponAttackType.RangedAttack);
+            me.ResetAttackTimer(WeaponAttackType.RangedAttack);
         }
 
         public void DoAutoAttackIfReady()

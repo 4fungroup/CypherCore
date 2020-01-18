@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@ using Game.DataStorage;
 using Game.Groups;
 using Game.Network.Packets;
 using Game.Spells;
-using System.Linq;
 
 namespace Game.Entities
 {
@@ -28,7 +27,7 @@ namespace Game.Entities
     {
         public Totem(SummonPropertiesRecord properties, Unit owner) : base(properties, owner, false)
         {
-            m_unitTypeMask |= UnitTypeMask.Totem;
+            UnitTypeMask |= UnitTypeMask.Totem;
             m_type = TotemType.Passive;
         }
 
@@ -78,12 +77,12 @@ namespace Game.Entities
             // Get spell cast by totem
             SpellInfo totemSpell = Global.SpellMgr.GetSpellInfo(GetSpell());
             if (totemSpell != null)
-                if (totemSpell.CalcCastTime(getLevel()) != 0)   // If spell has cast time . its an active totem
+                if (totemSpell.CalcCastTime(GetLevel()) != 0)   // If spell has cast time . its an active totem
                     m_type = TotemType.Active;
 
             m_duration = duration;
 
-            SetLevel(GetOwner().getLevel());
+            SetLevel(GetOwner().GetLevel());
         }
 
         public override void InitSummon()
@@ -132,7 +131,7 @@ namespace Game.Entities
                 Group group = owner.GetGroup();
                 if (group)
                 {
-                    for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.next())
+                    for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.Next())
                     {
                         Player target = refe.GetSource();
                         if (target && target.IsInMap(owner) && group.SameSubGroup(owner, target))

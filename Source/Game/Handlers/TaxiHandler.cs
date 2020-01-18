@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,7 +97,7 @@ namespace Game
             if (curloc == 0)
                 return;
 
-            bool lastTaxiCheaterState = GetPlayer().isTaxiCheater();
+            bool lastTaxiCheaterState = GetPlayer().IsTaxiCheater();
             if (unit.GetEntry() == 29480)
                 GetPlayer().SetTaxiCheater(true); // Grimwing in Ebon Hold, special case. NOTE: Not perfect, Zul'Aman should not be included according to WoWhead, and I think taxicheat includes it.
 
@@ -186,7 +186,7 @@ namespace Game
             if (to == null)
                 return;
 
-            if (!GetPlayer().isTaxiCheater())
+            if (!GetPlayer().IsTaxiCheater())
             {
                 if (!GetPlayer().m_taxi.IsTaximaskNodeKnown(curloc) || !GetPlayer().m_taxi.IsTaximaskNodeKnown(activateTaxi.Node))
                 {
@@ -238,7 +238,7 @@ namespace Game
             {
                 if (GetPlayer().m_taxi.RequestEarlyLanding())
                 {
-                    FlightPathMovementGenerator flight = (FlightPathMovementGenerator)GetPlayer().GetMotionMaster().top();
+                    FlightPathMovementGenerator flight = (FlightPathMovementGenerator)GetPlayer().GetMotionMaster().Top();
                     flight.LoadPath(GetPlayer(), flight.GetPath()[(int)flight.GetCurrentNode()].NodeIndex);
                     flight.Reset(GetPlayer());
                 }

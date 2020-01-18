@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ namespace Game
                 return;
 
             Item artifact = _player.GetItemByGuid(artifactAddPower.ArtifactGUID);
-            if (!artifact)
+            if (!artifact || artifact.IsArtifactDisabled())
                 return;
 
             uint currentArtifactTier = artifact.GetModifier(ItemModifier.ArtifactTier);
@@ -210,7 +210,7 @@ namespace Game
                 return;
 
             Item artifact = _player.GetItemByGuid(confirmArtifactRespec.ArtifactGUID);
-            if (!artifact)
+            if (!artifact || artifact.IsArtifactDisabled())
                 return;
 
             ulong xpCost = 0;

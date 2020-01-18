@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,7 +105,8 @@ namespace Framework.Constants
         CommerceObj = 45,
         ClientSession = 46,
         Cast = 47,
-        ClientConnection = 48
+        ClientConnection = 48,
+        ClubFinder = 49
     }
 
     public enum NotifyFlags

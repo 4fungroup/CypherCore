@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,7 +74,7 @@ namespace Game
                 return;
 
             Player player = GetPlayer();
-            if (player.getLevel() < WorldConfig.GetIntValue(WorldCfg.MailLevelReq))
+            if (player.GetLevel() < WorldConfig.GetIntValue(WorldCfg.MailLevelReq))
             {
                 SendNotification(CypherStrings.MailSenderReq, WorldConfig.GetIntValue(WorldCfg.MailLevelReq));
                 return;
@@ -150,7 +150,7 @@ namespace Game
             {
                 receiverTeam = receiver.GetTeam();
                 mailsCount = (byte)receiver.GetMails().Count;
-                receiverLevel = (byte)receiver.getLevel();
+                receiverLevel = (byte)receiver.GetLevel();
                 receiverAccountId = receiver.GetSession().GetAccountId();
                 receiverBnetAccountId = receiver.GetSession().GetBattlenetAccountId();
             }
@@ -610,7 +610,7 @@ namespace Game
             }
 
             Item bodyItem = new Item();                              // This is not bag and then can be used new Item.
-            if (!bodyItem.Create(Global.ObjectMgr.GetGenerator(HighGuid.Item).Generate(), 8383, player))
+            if (!bodyItem.Create(Global.ObjectMgr.GetGenerator(HighGuid.Item).Generate(), 8383, ItemContext.None, player))
                 return;
 
             // in mail template case we need create new item text

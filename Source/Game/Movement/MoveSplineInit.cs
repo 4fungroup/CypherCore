@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,7 @@ namespace Game.Movement
 
         public int Launch()
         {
-            MoveSpline move_spline = unit.moveSpline;
+            MoveSpline move_spline = unit.MoveSpline;
 
             bool transport = !unit.GetTransGUID().IsEmpty();
             Vector4 real_position = new Vector4();            
@@ -103,7 +103,7 @@ namespace Game.Movement
             move_spline.onTransport = !unit.GetTransGUID().IsEmpty();
 
             MovementFlag moveFlags = unit.m_movementInfo.GetMovementFlags();
-            if (!args.flags.hasFlag(SplineFlag.Backward))
+            if (!args.flags.HasFlag(SplineFlag.Backward))
                 moveFlags = (moveFlags & ~MovementFlag.Backward) | MovementFlag.Forward;
             else
                 moveFlags = (moveFlags & ~MovementFlag.Forward) | MovementFlag.Backward;
@@ -146,7 +146,7 @@ namespace Game.Movement
 
         public void Stop()
         {
-            MoveSpline move_spline = unit.moveSpline;
+            MoveSpline move_spline = unit.MoveSpline;
 
             // No need to stop if we are not moving
             if (move_spline.Finalized())
@@ -179,7 +179,7 @@ namespace Game.Movement
             packet.MoverGUID = unit.GetGUID();
             packet.Pos = new Vector3(loc.X, loc.Y, loc.Z);
             packet.SplineData.StopDistanceTolerance = 2;
-            packet.SplineData.ID = move_spline.GetId();
+            packet.SplineData.Id = move_spline.GetId();
 
             if (transport)
             {

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -91,11 +91,11 @@ namespace Game.Conditions
                     break;
                 case ConditionTypes.Class:
                     if (unit != null)
-                        condMeets = Convert.ToBoolean(unit.getClassMask() & ConditionValue1);
+                        condMeets = Convert.ToBoolean(unit.GetClassMask() & ConditionValue1);
                     break;
                 case ConditionTypes.Race:
                     if (unit != null)
-                        condMeets = Convert.ToBoolean(unit.getRaceMask() & ConditionValue1);
+                        condMeets = Convert.ToBoolean(unit.GetRaceMask() & ConditionValue1);
                     break;
                 case ConditionTypes.Gender:
                     if (player != null)
@@ -169,7 +169,7 @@ namespace Game.Conditions
                     break;
                 case ConditionTypes.Level:
                     if (unit != null)
-                        condMeets = MathFunctions.CompareValues((ComparisionType)ConditionValue2, unit.getLevel(), ConditionValue1);
+                        condMeets = MathFunctions.CompareValues((ComparisionType)ConditionValue2, unit.GetLevel(), ConditionValue1);
                     break;
                 case ConditionTypes.DrunkenState:
                     if (player != null)
@@ -201,7 +201,7 @@ namespace Game.Conditions
                     }
                     break;
                 case ConditionTypes.TypeMask:
-                    condMeets = Convert.ToBoolean((TypeMask)ConditionValue1 & obj.objectTypeMask);
+                    condMeets = Convert.ToBoolean((TypeMask)ConditionValue1 & obj.ObjectTypeMask);
                     break;
                 case ConditionTypes.RelationTo:
                     {
@@ -267,7 +267,7 @@ namespace Game.Conditions
                         condMeets = MathFunctions.CompareValues((ComparisionType)ConditionValue2, unit.GetHealthPct(), ConditionValue1);
                     break;
                 case ConditionTypes.WorldState:
-                    condMeets = (ConditionValue2 == Global.WorldMgr.getWorldState((WorldStates)ConditionValue1));
+                    condMeets = (ConditionValue2 == Global.WorldMgr.GetWorldState((WorldStates)ConditionValue1));
                     break;
                 case ConditionTypes.PhaseId:
                     condMeets = obj.GetPhaseShift().HasPhase(ConditionValue1);
@@ -332,7 +332,7 @@ namespace Game.Conditions
                         {
                             Pet pet = player.GetPet();
                             if (pet)
-                                condMeets = (((1 << (int)pet.getPetType()) & ConditionValue1) != 0);
+                                condMeets = (((1 << (int)pet.GetPetType()) & ConditionValue1) != 0);
                         }
                         break;
                     }
@@ -493,7 +493,7 @@ namespace Game.Conditions
             return mask;
         }
 
-        public bool isLoaded()
+        public bool IsLoaded()
         {
             return ConditionType > ConditionTypes.None || ReferenceId != 0;
         }

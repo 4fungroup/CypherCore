@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -122,7 +122,7 @@ namespace Game.Network.Packets
                 MissingScenarioPOIs[i] = _worldPacket.ReadInt32();
         }
 
-        public Array<int> MissingScenarioPOIs = new Array<int>(35);
+        public Array<int> MissingScenarioPOIs = new Array<int>(50);
     }
 
     class ScenarioPOIs : ServerPacket

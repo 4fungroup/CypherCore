@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,6 @@ using Framework.Constants;
 using Framework.Database;
 using Framework.GameMath;
 using Game.Entities;
-using System;
 using System.Collections.Generic;
 
 namespace Game.DataStorage
@@ -132,11 +131,8 @@ namespace Game.DataStorage
 
                     unsafe
                     {
-                        fixed (float* b = areaTriggerTemplate.DefaultDatas.Data)
-                        {
-                            for (byte i = 0; i < SharedConst.MaxAreatriggerEntityData; ++i)
-                                b[i] = templates.Read<float>(3 + i);
-                        }
+                        for (byte i = 0; i < SharedConst.MaxAreatriggerEntityData; ++i)
+                            areaTriggerTemplate.DefaultDatas.Data[i] = templates.Read<float>(3 + i);
                     }
 
                     areaTriggerTemplate.ScriptId = Global.ObjectMgr.GetScriptId(templates.Read<string>(9));

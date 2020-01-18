@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -252,8 +252,8 @@ namespace Game.Maps
             // should only unload VMaps if this is the last instance and grid unloading is enabled
             if (m_InstancedMaps.Count <= 1 && WorldConfig.GetBoolValue(WorldCfg.GridUnload))
             {
-                Global.VMapMgr.unloadMap(pair.Value.GetId());
-                Global.MMapMgr.unloadMap(pair.Value.GetId());
+                Global.VMapMgr.UnloadMap(pair.Value.GetId());
+                Global.MMapMgr.UnloadMap(pair.Value.GetId());
                 // in that case, unload grids of the base map, too
                 // so in the next map creation, (EnsureGridCreated actually) VMaps will be reloaded
                 base.UnloadAll();

@@ -1,6 +1,6 @@
 ﻿
 /*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -67,6 +67,15 @@ namespace Game
                 inspectResult.GuildData.Set(guildData);
             }
 
+            Item heartOfAzeroth = player.GetItemByEntry(PlayerConst.ItemIdHeartOfAzeroth, ItemSearchLocation.Everywhere);
+            if (heartOfAzeroth != null)
+            {
+                AzeriteItem azeriteItem = heartOfAzeroth.ToAzeriteItem();
+                if (azeriteItem != null)
+                    inspectResult.AzeriteLevel = azeriteItem.GetEffectiveLevel();
+            }
+
+            inspectResult.ItemLevel = (int)player.GetAverageItemLevel();
             inspectResult.LifetimeMaxRank = player.m_activePlayerData.LifetimeMaxRank;
             inspectResult.TodayHK = player.m_activePlayerData.TodayHonorableKills;
             inspectResult.YesterdayHK = player.m_activePlayerData.YesterdayHonorableKills;

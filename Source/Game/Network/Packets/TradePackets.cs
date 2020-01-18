@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -151,7 +151,7 @@ namespace Game.Network.Packets
                     _worldPacket.WriteUInt32(ItemID);
                     break;
                 case TradeStatus.Initiated:
-                    _worldPacket.WriteUInt32(ID);
+                    _worldPacket.WriteUInt32(Id);
                     break;
                 case TradeStatus.Proposed:
                     _worldPacket.WritePackedGuid(Partner);
@@ -181,7 +181,7 @@ namespace Game.Network.Packets
         public bool FailureForYou;
         public InventoryResult BagResult;
         public uint ItemID;
-        public uint ID;
+        public uint Id;
         public bool PartnerIsSameBnetAccount;
     }
 
@@ -192,7 +192,7 @@ namespace Game.Network.Packets
         public override void Write()
         {
             _worldPacket.WriteUInt8(WhichPlayer);
-            _worldPacket.WriteUInt32(ID);
+            _worldPacket.WriteUInt32(Id);
             _worldPacket.WriteUInt32(ClientStateIndex);
             _worldPacket.WriteUInt32(CurrentStateIndex);
             _worldPacket.WriteUInt64(Gold);
@@ -261,7 +261,7 @@ namespace Game.Network.Packets
         public uint ClientStateIndex;
         public List<TradeItem> Items = new List<TradeItem>();
         public int CurrencyType;
-        public uint ID;
+        public uint Id;
         public int ProposedEnchantment;
         public int CurrencyQuantity;
     }

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,11 @@ namespace Game.Entities
 {
     public class UpdateData
     {
+        uint MapId;
+        uint BlockCount;
+        List<ObjectGuid> outOfRangeGUIDs = new List<ObjectGuid>();
+        ByteBuffer data = new ByteBuffer();
+
         public UpdateData(uint mapId)
         {
             MapId = mapId;
@@ -82,10 +87,5 @@ namespace Game.Entities
         public List<ObjectGuid> GetOutOfRangeGUIDs() { return outOfRangeGUIDs; }
 
         public void SetMapId(ushort mapId) { MapId = mapId; }
-
-        uint MapId;
-        uint BlockCount;
-        List<ObjectGuid> outOfRangeGUIDs = new List<ObjectGuid>();
-        ByteBuffer data = new ByteBuffer();
     }
 }

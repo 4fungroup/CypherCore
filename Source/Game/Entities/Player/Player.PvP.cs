@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ namespace Game.Entities
             UpdateHonorFields();
 
             // do not reward honor in arenas, but return true to enable onkill spellproc
-            if (InBattleground() && GetBattleground() && GetBattleground().isArena())
+            if (InBattleground() && GetBattleground() && GetBattleground().IsArena())
                 return true;
 
             // Promote to float for calculations
@@ -103,7 +103,7 @@ namespace Game.Entities
                     if (GetTeam() == plrVictim.GetTeam() && !Global.WorldMgr.IsFFAPvPRealm())
                         return false;
 
-                    byte k_level = (byte)getLevel();
+                    byte k_level = (byte)GetLevel();
                     byte k_grey = (byte)Formulas.GetGrayLevel(k_level);
                     byte v_level = (byte)victim.GetLevelForTarget(this);
 
@@ -132,7 +132,7 @@ namespace Game.Entities
                     else
                         victim_guid.Clear();                        // Don't show HK: <rank> message, only log.
 
-                    honor_f = (float)Math.Ceiling(Formulas.hk_honor_at_level_f(k_level) * (v_level - k_grey) / (k_level - k_grey));
+                    honor_f = (float)Math.Ceiling(Formulas.HKHonorAtLevelF(k_level) * (v_level - k_grey) / (k_level - k_grey));
 
                     // count the number of playerkills in one day
                     ApplyModUpdateFieldValue(m_values.ModifyValue(m_activePlayerData).ModifyValue(m_activePlayerData.TodayHonorableKills), (ushort)1, true);
@@ -263,7 +263,7 @@ namespace Game.Entities
             uint newHonorXP = currentHonorXP + xp;
             uint honorLevel = GetHonorLevel();
 
-            if (xp < 1 || getLevel() < PlayerConst.LevelMinHonor || IsMaxHonorLevel())
+            if (xp < 1 || GetLevel() < PlayerConst.LevelMinHonor || IsMaxHonorLevel())
                 return;
 
             while (newHonorXP >= nextHonorLevelXP)
@@ -340,10 +340,10 @@ namespace Game.Entities
             if (talentInfo.SpecID != GetPrimarySpecialization())
                 return TalentLearnResult.FailedUnknown;
 
-            if (talentInfo.LevelRequired > getLevel())
+            if (talentInfo.LevelRequired > GetLevel())
                 return TalentLearnResult.FailedUnknown;
 
-            if (Global.DB2Mgr.GetRequiredLevelForPvpTalentSlot(slot, GetClass()) > getLevel())
+            if (Global.DB2Mgr.GetRequiredLevelForPvpTalentSlot(slot, GetClass()) > GetLevel())
                 return TalentLearnResult.FailedUnknown;
 
             PvpTalentCategoryRecord talentCategory = CliDB.PvpTalentCategoryStorage.LookupByKey(talentInfo.PvpTalentCategoryID);
@@ -654,7 +654,7 @@ namespace Game.Entities
 
             // BUG: sometimes when player clicks on flag in AB - client won't send gameobject_use, only gameobject_report_use packet
             // Note: Mount, stealth and invisibility will be removed when used
-            return (!isTotalImmune() &&                            // Damage immune
+            return (!IsTotalImmune() &&                            // Damage immune
             !HasAura(BattlegroundConst.SpellRecentlyDroppedFlag) &&       // Still has recently held flag debuff
             IsAlive());                                    // Alive
         }
@@ -669,7 +669,7 @@ namespace Game.Entities
         public void SetBattlegroundEntryPoint()
         {
             // Taxi path store
-            if (!m_taxi.empty())
+            if (!m_taxi.Empty())
             {
                 m_bgData.mountSpell = 0;
                 m_bgData.taxiPath[0] = m_taxi.GetTaxiSource();
@@ -695,9 +695,9 @@ namespace Game.Entities
                 // If map is dungeon find linked graveyard
                 if (GetMap().IsDungeon())
                 {
-                    WorldSafeLocsRecord entry = Global.ObjectMgr.GetClosestGraveYard(this, GetTeam(), this);
+                    WorldSafeLocsEntry entry = Global.ObjectMgr.GetClosestGraveYard(this, GetTeam(), this);
                     if (entry != null)
-                        m_bgData.joinPos = new WorldLocation(entry.MapID, entry.Loc.X, entry.Loc.Y, entry.Loc.Z, 0.0f);
+                        m_bgData.joinPos = entry.Loc;
                     else
                         Log.outError(LogFilter.Player, "SetBattlegroundEntryPoint: Dungeon map {0} has no linked graveyard, setting home location as entry point.", GetMapId());
                 }
@@ -729,7 +729,7 @@ namespace Game.Entities
                 bg.RemovePlayerAtLeave(GetGUID(), teleportToEntryPoint, true);
 
                 // call after remove to be sure that player resurrected for correct cast
-                if (bg.isBattleground() && !IsGameMaster() && WorldConfig.GetBoolValue(WorldCfg.BattlegroundCastDeserter))
+                if (bg.IsBattleground() && !IsGameMaster() && WorldConfig.GetBoolValue(WorldCfg.BattlegroundCastDeserter))
                 {
                     if (bg.GetStatus() == BattlegroundStatus.InProgress || bg.GetStatus() == BattlegroundStatus.WaitJoin)
                     {
@@ -752,7 +752,7 @@ namespace Game.Entities
             if (HasAura(26013))
                 return false;
 
-            if (bg.isArena() && !GetSession().HasPermission(RBACPermissions.JoinArenas))
+            if (bg.IsArena() && !GetSession().HasPermission(RBACPermissions.JoinArenas))
                 return false;
 
             if (bg.IsRandom() && !GetSession().HasPermission(RBACPermissions.JoinRandomBg))
@@ -830,7 +830,7 @@ namespace Game.Entities
                 return false;
 
             // limit check leel to dbc compatible level range
-            uint level = getLevel();
+            uint level = GetLevel();
             if (level > WorldConfig.GetIntValue(WorldCfg.MaxPlayerLevel))
                 level = WorldConfig.GetUIntValue(WorldCfg.MaxPlayerLevel);
 

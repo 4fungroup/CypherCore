@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -258,7 +258,7 @@ namespace Game
             GameObject go = GetPlayer().GetGameObjectIfCanInteractWith(packet.Guid);
             if (go)
             {
-                if (go.GetAI().GossipHello(GetPlayer(), false))
+                if (go.GetAI().GossipHello(GetPlayer(), true))
                     return;
 
                 GetPlayer().UpdateCriteria(CriteriaTypes.UseGameobject, go.GetEntry());
@@ -308,7 +308,7 @@ namespace Game
                 return;
 
             // can't use our own spells when we're in possession of another unit,
-            if (GetPlayer().isPossessing())
+            if (GetPlayer().IsPossessing())
                 return;
 
             // client provided targets
@@ -337,7 +337,7 @@ namespace Game
             spell.m_fromClient = true;
             spell.m_misc.Data0 = cast.Cast.Misc[0];
             spell.m_misc.Data1 = cast.Cast.Misc[1];
-            spell.prepare(targets);
+            spell.Prepare(targets);
         }
 
         [WorldPacketHandler(ClientOpcodes.CancelCast, Processing = PacketProcessing.ThreadSafe)]

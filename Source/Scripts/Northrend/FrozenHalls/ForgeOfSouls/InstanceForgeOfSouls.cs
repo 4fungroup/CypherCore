@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -220,7 +220,7 @@ namespace Scripts.Northrend.FrozenHalls.ForgeOfSouls
             Initialize();
         }
 
-        public override void sGossipSelect(Player player, uint menuId, uint gossipListId)
+        public override void GossipSelect(Player player, uint menuId, uint gossipListId)
         {
             if (menuId == Misc.MenuIdSylvanas && gossipListId == Misc.GossipOptionId)
             {
@@ -304,7 +304,7 @@ namespace Scripts.Northrend.FrozenHalls.ForgeOfSouls
             Initialize();
         }
 
-        public override void sGossipSelect(Player player, uint menuId, uint gossipListId)
+        public override void GossipSelect(Player player, uint menuId, uint gossipListId)
         {
             if (menuId == Misc.MenuIdJaina && gossipListId == Misc.GossipOptionId)
             {

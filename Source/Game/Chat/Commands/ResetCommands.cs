@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ namespace Game.Chat
         {
             Player target;
             ObjectGuid targetGuid;
-            if (!handler.extractPlayerTarget(args, out target, out targetGuid))
+            if (!handler.ExtractPlayerTarget(args, out target, out targetGuid))
                 return false;
 
             if (target)
@@ -48,7 +48,7 @@ namespace Game.Chat
         static bool HandleResetHonorCommand(StringArguments args, CommandHandler handler)
         {
             Player target;
-            if (!handler.extractPlayerTarget(args, out target))
+            if (!handler.ExtractPlayerTarget(args, out target))
                 return false;
 
             target.ResetHonorStats();
@@ -72,7 +72,7 @@ namespace Game.Chat
             if (!player.HasAuraType(AuraType.ModShapeshift))
                 player.SetShapeshiftForm(ShapeShiftForm.None);
 
-            player.setFactionForRace(player.GetRace());
+            player.SetFactionForRace(player.GetRace());
             player.SetPowerType(powerType);
 
             // reset only if player not in some form;
@@ -92,13 +92,13 @@ namespace Game.Chat
         static bool HandleResetLevelCommand(StringArguments args, CommandHandler handler)
         {
             Player target;
-            if (!handler.extractPlayerTarget(args, out target))
+            if (!handler.ExtractPlayerTarget(args, out target))
                 return false;
 
             if (!HandleResetStatsOrLevelHelper(target))
                 return false;
 
-            byte oldLevel = (byte)target.getLevel();
+            byte oldLevel = (byte)target.GetLevel();
 
             // set starting level
             uint startLevel = (uint)(target.GetClass() != Class.Deathknight ? WorldConfig.GetIntValue(WorldCfg.StartPlayerLevel) : WorldConfig.GetIntValue(WorldCfg.StartDeathKnightPlayerLevel));
@@ -129,7 +129,7 @@ namespace Game.Chat
             Player target;
             ObjectGuid targetGuid;
             string targetName;
-            if (!handler.extractPlayerTarget(args, out target, out targetGuid, out targetName))
+            if (!handler.ExtractPlayerTarget(args, out target, out targetGuid, out targetName))
                 return false;
 
             if (target)
@@ -157,7 +157,7 @@ namespace Game.Chat
         static bool HandleResetStatsCommand(StringArguments args, CommandHandler handler)
         {
             Player target;
-            if (!handler.extractPlayerTarget(args, out target))
+            if (!handler.ExtractPlayerTarget(args, out target))
                 return false;
 
             if (!HandleResetStatsOrLevelHelper(target))
@@ -178,7 +178,7 @@ namespace Game.Chat
             ObjectGuid targetGuid;
             string targetName;
 
-            if (!handler.extractPlayerTarget(args, out target, out targetGuid, out targetName))
+            if (!handler.ExtractPlayerTarget(args, out target, out targetGuid, out targetName))
             {
                 /* TODO: 6.x remove/update pet talents
                 // Try reset talents as Hunter Pet
@@ -227,7 +227,7 @@ namespace Game.Chat
                 stmt.AddValue(1, targetGuid.GetCounter());
                 DB.Characters.Execute(stmt);
 
-                string nameLink = handler.playerLink(targetName);
+                string nameLink = handler.PlayerLink(targetName);
                 handler.SendSysMessage(CypherStrings.ResetTalentsOffline, nameLink);
                 return true;
             }

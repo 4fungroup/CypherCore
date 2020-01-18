@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,7 +57,7 @@ namespace Game.Maps
                 return null;
             }
 
-            if (entranceId != 0 && !CliDB.WorldSafeLocsStorage.ContainsKey(entranceId))
+            if (entranceId != 0 && Global.ObjectMgr.GetWorldSafeLoc(entranceId) == null)
             {
                 Log.outWarn(LogFilter.Misc, "InstanceSaveManager.AddInstanceSave: invalid entranceId = {0} defined for instance save with mapid = {1}, instanceid = {2}!", entranceId, mapId, instanceId);
                 entranceId = 0;

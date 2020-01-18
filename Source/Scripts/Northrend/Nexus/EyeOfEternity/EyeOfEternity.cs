@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -235,7 +235,7 @@ namespace Scripts.Northrend.Nexus.EyeOfEternity
                 Creature malygos = instance.GetCreature(malygosGUID);
                 if (malygos)
                 {
-                    var threatList = malygos.GetThreatManager().getThreatList();
+                    var threatList = malygos.GetThreatManager().GetThreatList();
                     foreach (var guid in vortexTriggers)
                     {
                         if (threatList.Empty())
@@ -251,7 +251,7 @@ namespace Scripts.Northrend.Nexus.EyeOfEternity
                                 if (counter >= 5)
                                     break;
 
-                                Unit target = refe.getTarget();
+                                Unit target = refe.GetTarget();
                                 if (target)
                                 {
                                     Player player = target.ToPlayer();

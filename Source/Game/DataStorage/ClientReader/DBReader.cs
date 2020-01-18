@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,11 +127,13 @@ namespace Game.DataStorage
                 }
 
                 long previousStringTableSize = 0;
+                long previousRecordCount = 0;
                 for (int sectionIndex = 0; sectionIndex < Header.SectionsCount; sectionIndex++)
                 {
                     if (sections[sectionIndex].TactKeyLookup != 0)// && !hasTactKeyFunc(sections[sectionIndex].TactKeyLookup))
                     {
                         previousStringTableSize += sections[sectionIndex].StringTableSize;
+                        previousRecordCount += sections[sectionIndex].NumRecords;
                         //Console.WriteLine("Detected db2 with encrypted section! HasKey {0}", CASC.HasKey(Sections[sectionIndex].TactKeyLookup));
                         continue;
                     }
@@ -150,17 +152,11 @@ namespace Game.DataStorage
                         // string data
                         stringsTable = new Dictionary<long, string>();
 
-                        long stringDataOffset = 0;
-                        if (sectionIndex == 0)
-                            stringDataOffset = (Header.RecordCount - sections[sectionIndex].NumRecords) * Header.RecordSize;
-                        else
-                            stringDataOffset = previousStringTableSize;
-
                         for (int i = 0; i < sections[sectionIndex].StringTableSize;)
                         {
                             long oldPos = reader.BaseStream.Position;
 
-                            stringsTable[oldPos + stringDataOffset] = reader.ReadCString();
+                            stringsTable[i + previousStringTableSize] = reader.ReadCString();
 
                             i += (int)(reader.BaseStream.Position - oldPos);
                         }
@@ -238,7 +234,10 @@ namespace Game.DataStorage
 
                         bool hasRef = refData.Entries.TryGetValue(i, out int refId);
 
-                        var rec = new WDC3Row(this, bitReader, sections[sectionIndex].FileOffset, Header.HasIndexTable() ? (isIndexEmpty ? i : indexData[i]) : -1, hasRef ? refId : -1, stringsTable);
+                        long recordIndex = i + previousRecordCount;
+                        long recordOffset =  (recordIndex * Header.RecordSize) - (Header.RecordCount * Header.RecordSize);
+
+                        var rec = new WDC3Row(this, bitReader, (int)recordOffset, Header.HasIndexTable() ? (isIndexEmpty ? i : indexData[i]) : -1, hasRef ? refId : -1, stringsTable);
                         _records.Add(rec.Id, rec);
                     }
 
@@ -250,6 +249,7 @@ namespace Game.DataStorage
                     }
 
                     previousStringTableSize += sections[sectionIndex].StringTableSize;
+                    previousRecordCount += sections[sectionIndex].NumRecords;
                 }
             }
 
@@ -455,12 +455,12 @@ namespace Game.DataStorage
                             }
                             else
                             {
-                                var pos = _recordsOffset + _data.Offset + (_data.Position >> 3);
+                                var pos = _recordsOffset + (_data.Position >> 3);
 
                                 int[] strIdx = GetFieldValueArray<int>(fieldIndex, atr.Length);
 
                                 for (int i = 0; i < array.Length; i++)
-                                    array[i] = _stringsTable[pos + i * 4 + strIdx[i]];
+                                    array[i] = _stringsTable.LookupByKey(pos + i * 4 + strIdx[i]);
                             }
 
                             f.SetValue(obj, array);
@@ -522,9 +522,9 @@ namespace Game.DataStorage
                             }
                             else
                             {
-                                var pos = _recordsOffset + _data.Offset + (_data.Position >> 3);
+                                var pos = _recordsOffset + (_data.Position >> 3);
                                 int ofs = GetFieldValue<int>(fieldIndex);
-                                f.SetValue(obj, _stringsTable[pos + ofs]);
+                                f.SetValue(obj, _stringsTable.LookupByKey(pos + ofs));
                             }
                             break;
                         case TypeCode.Object:
@@ -537,9 +537,9 @@ namespace Game.DataStorage
                                 }
                                 else
                                 {
-                                    var pos = _recordsOffset + _data.Offset + (_data.Position >> 3);
+                                    var pos = _recordsOffset + (_data.Position >> 3);
                                     int ofs = GetFieldValue<int>(fieldIndex);
-                                    localized[LocaleConstant.enUS] = _stringsTable[pos + ofs];
+                                    localized[LocaleConstant.enUS] = _stringsTable.LookupByKey(pos + ofs);
                                 }
 
                                 f.SetValue(obj, localized);

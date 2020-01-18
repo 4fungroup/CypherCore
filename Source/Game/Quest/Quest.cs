@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -125,16 +125,17 @@ namespace Game
             TreasurePickerID = fields.Read<int>(109);
             Expansion = fields.Read<int>(110);
             ManagedWorldStateID = fields.Read<int>(111);
+            QuestSessionBonus = fields.Read<int>(112);
 
-            LogTitle = fields.Read<string>(112);
-            LogDescription = fields.Read<string>(113);
-            QuestDescription = fields.Read<string>(114);
-            AreaDescription = fields.Read<string>(115);
-            PortraitGiverText = fields.Read<string>(116);
-            PortraitGiverName = fields.Read<string>(117);
-            PortraitTurnInText = fields.Read<string>(118);
-            PortraitTurnInName = fields.Read<string>(119);
-            QuestCompletionLog = fields.Read<string>(120);
+            LogTitle = fields.Read<string>(113);
+            LogDescription = fields.Read<string>(114);
+            QuestDescription = fields.Read<string>(115);
+            AreaDescription = fields.Read<string>(116);
+            PortraitGiverText = fields.Read<string>(117);
+            PortraitGiverName = fields.Read<string>(118);
+            PortraitTurnInText = fields.Read<string>(119);
+            PortraitTurnInName = fields.Read<string>(120);
+            QuestCompletionLog = fields.Read<string>(121);
         }
 
         public void LoadQuestDetails(SQLFields fields)
@@ -217,7 +218,7 @@ namespace Game
         public void LoadQuestObjective(SQLFields fields)
         {
             QuestObjective obj = new QuestObjective();
-            obj.ID = fields.Read<uint>(0);
+            obj.Id = fields.Read<uint>(0);
             obj.QuestID = fields.Read<uint>(1);
             obj.Type = (QuestObjectiveType)fields.Read<byte>(2);
             obj.StorageIndex = fields.Read<sbyte>(3);
@@ -237,7 +238,7 @@ namespace Game
 
             foreach (QuestObjective obj in Objectives)
             {
-                if (obj.ID == objID)
+                if (obj.Id == objID)
                 {
                     byte effectIndex = fields.Read<byte>(3);
                     if (obj.VisualEffects == null)
@@ -262,10 +263,10 @@ namespace Game
                     return 0;
 
                 float multiplier = 1.0f;
-                if (questLevel != player.getLevel())
-                    multiplier = CliDB.XpGameTable.GetRow(Math.Min(player.getLevel(), questLevel)).Divisor / CliDB.XpGameTable.GetRow(player.getLevel()).Divisor;
+                if (questLevel != player.GetLevel())
+                    multiplier = CliDB.XpGameTable.GetRow(Math.Min(player.GetLevel(), questLevel)).Divisor / CliDB.XpGameTable.GetRow(player.GetLevel()).Divisor;
 
-                int diffFactor = (int)(2 * (questLevel + (Level == -1 ? 0 : 5) - player.getLevel()) + 10);
+                int diffFactor = (int)(2 * (questLevel + (Level == -1 ? 0 : 5) - player.GetLevel()) + 10);
                 if (diffFactor < 1)
                     diffFactor = 1;
                 else if (diffFactor > 10)
@@ -402,6 +403,122 @@ namespace Game
             return (!IsDFQuest() && !IsDaily() && (!IsRepeatable() || IsWeekly() || IsMonthly() || IsSeasonal()));
         }
 
+        public void InitializeQueryData()
+        {
+            QueryData = new QueryQuestInfoResponse();
+
+            QueryData.Allow = true;
+            QueryData.QuestID = Id;
+
+            QueryData.Info.LogTitle = LogTitle;
+            QueryData.Info.LogDescription = LogDescription;
+            QueryData.Info.QuestDescription = QuestDescription;
+            QueryData.Info.AreaDescription = AreaDescription;
+            QueryData.Info.QuestCompletionLog = QuestCompletionLog;
+            QueryData.Info.PortraitGiverText = PortraitGiverText;
+            QueryData.Info.PortraitGiverName = PortraitGiverName;
+            QueryData.Info.PortraitTurnInText = PortraitTurnInText;
+            QueryData.Info.PortraitTurnInName = PortraitTurnInName;
+
+            QueryData.Info.QuestID = Id;
+            QueryData.Info.QuestType = (int)Type;
+            QueryData.Info.QuestLevel = Level;
+            QueryData.Info.QuestScalingFactionGroup = ScalingFactionGroup;
+            QueryData.Info.QuestMaxScalingLevel = MaxScalingLevel;
+            QueryData.Info.QuestPackageID = PackageID;
+            QueryData.Info.QuestMinLevel = MinLevel;
+            QueryData.Info.QuestSortID = QuestSortID;
+            QueryData.Info.QuestInfoID = QuestInfoID;
+            QueryData.Info.SuggestedGroupNum = SuggestedPlayers;
+            QueryData.Info.RewardNextQuest = NextQuestInChain;
+            QueryData.Info.RewardXPDifficulty = RewardXPDifficulty;
+            QueryData.Info.RewardXPMultiplier = RewardXPMultiplier;
+
+            if (!HasFlag(QuestFlags.HiddenRewards))
+                QueryData.Info.RewardMoney = RewardMoney;
+
+            QueryData.Info.RewardMoneyDifficulty = RewardMoneyDifficulty;
+            QueryData.Info.RewardMoneyMultiplier = RewardMoneyMultiplier;
+            QueryData.Info.RewardBonusMoney = RewardBonusMoney;
+            for (byte i = 0; i < SharedConst.QuestRewardDisplaySpellCount; ++i)
+                QueryData.Info.RewardDisplaySpell[i] = RewardDisplaySpell[i];
+
+            QueryData.Info.RewardSpell = RewardSpell;
+
+            QueryData.Info.RewardHonor = RewardHonor;
+            QueryData.Info.RewardKillHonor = RewardKillHonor;
+
+            QueryData.Info.RewardArtifactXPDifficulty = (int)RewardArtifactXPDifficulty;
+            QueryData.Info.RewardArtifactXPMultiplier = RewardArtifactXPMultiplier;
+            QueryData.Info.RewardArtifactCategoryID = (int)RewardArtifactCategoryID;
+
+            QueryData.Info.StartItem = SourceItemId;
+            QueryData.Info.Flags = (uint)Flags;
+            QueryData.Info.FlagsEx = (uint)FlagsEx;
+            QueryData.Info.FlagsEx2 = (uint)FlagsEx2;
+            QueryData.Info.RewardTitle = RewardTitleId;
+            QueryData.Info.RewardArenaPoints = RewardArenaPoints;
+            QueryData.Info.RewardSkillLineID = RewardSkillId;
+            QueryData.Info.RewardNumSkillUps = RewardSkillPoints;
+            QueryData.Info.RewardFactionFlags = RewardReputationMask;
+            QueryData.Info.PortraitGiver = QuestGiverPortrait;
+            QueryData.Info.PortraitGiverMount = QuestGiverPortraitMount;
+            QueryData.Info.PortraitTurnIn = QuestTurnInPortrait;
+
+            for (byte i = 0; i < SharedConst.QuestItemDropCount; ++i)
+            {
+                QueryData.Info.ItemDrop[i] = (int)ItemDrop[i];
+                QueryData.Info.ItemDropQuantity[i] = (int)ItemDropQuantity[i];
+            }
+
+            if (!HasFlag(QuestFlags.HiddenRewards))
+            {
+                for (byte i = 0; i < SharedConst.QuestRewardItemCount; ++i)
+                {
+                    QueryData.Info.RewardItems[i] = RewardItemId[i];
+                    QueryData.Info.RewardAmount[i] = RewardItemCount[i];
+                }
+                for (byte i = 0; i < SharedConst.QuestRewardChoicesCount; ++i)
+                {
+                    QueryData.Info.UnfilteredChoiceItems[i].ItemID = RewardChoiceItemId[i];
+                    QueryData.Info.UnfilteredChoiceItems[i].Quantity = RewardChoiceItemCount[i];
+                }
+            }
+
+            for (byte i = 0; i < SharedConst.QuestRewardReputationsCount; ++i)
+            {
+                QueryData.Info.RewardFactionID[i] = RewardFactionId[i];
+                QueryData.Info.RewardFactionValue[i] = RewardFactionValue[i];
+                QueryData.Info.RewardFactionOverride[i] = RewardFactionOverride[i];
+                QueryData.Info.RewardFactionCapIn[i] = (int)RewardFactionCapIn[i];
+            }
+
+            QueryData.Info.POIContinent = POIContinent;
+            QueryData.Info.POIx = POIx;
+            QueryData.Info.POIy = POIy;
+            QueryData.Info.POIPriority = POIPriority;
+
+            QueryData.Info.AllowableRaces = AllowableRaces;
+            QueryData.Info.TreasurePickerID = TreasurePickerID;
+            QueryData.Info.Expansion = Expansion;
+            QueryData.Info.ManagedWorldStateID = ManagedWorldStateID;
+            QueryData.Info.QuestSessionBonus = 0; //GetQuestSessionBonus(); // this is only sent while quest session is active
+
+            foreach (QuestObjective questObjective in Objectives)
+                QueryData.Info.Objectives.Add(questObjective);
+
+            for (int i = 0; i < SharedConst.QuestRewardCurrencyCount; ++i)
+            {
+                QueryData.Info.RewardCurrencyID[i] = RewardCurrencyId[i];
+                QueryData.Info.RewardCurrencyQty[i] = RewardCurrencyCount[i];
+            }
+
+            QueryData.Info.AcceptedSoundKitID = SoundAccept;
+            QueryData.Info.CompleteSoundKitID = SoundTurnIn;
+            QueryData.Info.AreaGroupID = AreaGroupID;
+            QueryData.Info.TimeAllowed = LimitTime;
+        }
+
         public bool HasFlag(QuestFlags flag) { return (Flags & flag) != 0; }
         public bool HasFlagEx(QuestFlagsEx flag) { return (FlagsEx & flag) != 0; }
         public bool HasFlagEx(QuestFlagsEx2 flag) { return (FlagsEx2 & flag) != 0; }
@@ -492,6 +609,7 @@ namespace Game
         public int TreasurePickerID;
         public int Expansion;
         public int ManagedWorldStateID;
+        public int QuestSessionBonus;
         public List<QuestObjective> Objectives = new List<QuestObjective>();
         public string LogTitle = "";
         public string LogDescription = "";
@@ -541,6 +659,7 @@ namespace Game
 
         public List<int> prevQuests = new List<int>();
         public List<uint> prevChainQuests = new List<uint>();
+        public QueryQuestInfoResponse QueryData;
 
         uint _rewChoiceItemsCount;
         uint _rewItemsCount;
@@ -609,7 +728,7 @@ namespace Game
 
     public class QuestObjective
     {
-        public uint ID;
+        public uint Id;
         public uint QuestID;
         public QuestObjectiveType Type;
         public sbyte StorageIndex;

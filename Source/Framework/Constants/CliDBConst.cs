@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -923,6 +923,18 @@ namespace Framework.Constants
         First = NoLinkRequired | DontCountFirstBonusRank,
     }
 
+    public enum AzeriteItemMilestoneType
+    {
+        MajorEssence = 0,
+        MinorEssence = 1,
+        BonusStamina = 2
+    }
+
+    public enum AzeriteTierUnlockSetFlags
+    {
+        Default = 0x1
+    }
+
     public enum BattlegroundBracketId                                  // bracketId for level ranges
     {
         First = 0,
@@ -974,6 +986,17 @@ namespace Framework.Constants
         Max
     }
 
+    public enum BattlemasterListFlags : sbyte
+    {
+        Disabled = 0x01,
+        SkipRoleCheck = 0x02,
+        Unk4 = 0x04,
+        CanInitWarGame = 0x08,
+        CanSpecificQueue = 0x10,
+        Brawl = 0x20,
+        Factional = 0x40
+    }
+
     public enum ChrSpecializationFlag
     {
         Caster = 0x01,
@@ -987,7 +1010,8 @@ namespace Framework.Constants
 
     public enum Curves
     {
-        ArtifactRelicItemLevelBonus = 1718
+        ArtifactRelicItemLevelBonus = 1718,
+        AzeriteEmpoweredItemRespecCost = 6785
     }
 
     public enum Emote
@@ -1393,6 +1417,14 @@ namespace Framework.Constants
         UnderwaterAllowed = 0x8
     }
 
+    public enum ModifierTreeOperator
+    {
+        SingleTrue = 2,
+        SingleFalse = 3,
+        All = 4,
+        Some = 8
+    }
+
     public enum MountCapabilityFlags : byte
     {
         Ground = 0x1,
@@ -1421,13 +1453,25 @@ namespace Framework.Constants
     }
 
     // PhaseUseFlags fields in different db2s
-    public  enum PhaseUseFlagsValues : byte
+    public enum PhaseUseFlagsValues : byte
     {
         None = 0x0,
         AlwaysVisible = 0x1,
         Inverse = 0x2,
 
         All = AlwaysVisible | Inverse
+    }
+
+    public enum PlayerConditionLfgStatus
+    {
+        InLFGDungeon = 1,
+        InLFGRandomDungeon = 2,
+        InLFGFirstRandomDungeon = 3,
+        PartialClear = 4,
+        StrangerCount = 5,
+        VoteKickCount = 6,
+        BootCount = 7,
+        GearDiff = 8
     }
 
     public enum PrestigeLevelInfoFlags : byte
@@ -1818,5 +1862,85 @@ namespace Framework.Constants
         Dungeon = 4,
         Micro = 5,
         Orphan = 6
+    }
+
+    public enum WorldStateExpressionValueType
+    {
+        Constant = 1,
+        WorldState = 2,
+        Function = 3
+    }
+
+    public enum WorldStateExpressionLogic
+    {
+        None = 0,
+        And = 1,
+        Or = 2,
+        Xor = 3,
+    }
+
+    public enum WorldStateExpressionComparisonType
+    {
+        None = 0,
+        Equal = 1,
+        NotEqual = 2,
+        Less = 3,
+        LessOrEqual = 4,
+        Greater = 5,
+        GreaterOrEqual = 6,
+    }
+
+    public enum WorldStateExpressionOperatorType
+    {
+        None = 0,
+        Sum = 1,
+        Substraction = 2,
+        Multiplication = 3,
+        Division = 4,
+        Remainder = 5,
+    }
+
+    public enum WorldStateExpressionFunctions
+    {
+        None = 0,
+        Random,
+        Month,
+        Day,
+        TimeOfDay,
+        Region,
+        ClockHour,
+        OldDifficultyId,
+        HolidayStart,
+        HolidayLeft,
+        HolidayActive,
+        TimerCurrentTime,
+        WeekNumber,
+        Unk13,
+        Unk14,
+        DifficultyId,
+        WarModeActive,
+        Unk17,
+        Unk18,
+        Unk19,
+        Unk20,
+        Unk21,
+        WorldStateExpression,
+        KeystoneAffix,
+        Unk24,
+        Unk25,
+        Unk26,
+        Unk27,
+        KeystoneLevel,
+        Unk29,
+        Unk30,
+        Unk31,
+        Unk32,
+        MersenneRandom,
+        Unk34,
+        Unk35,
+        Unk36,
+        UiWidgetData,
+
+        Max,
     }
 }

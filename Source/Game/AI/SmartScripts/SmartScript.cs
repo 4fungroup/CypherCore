@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -103,8 +103,7 @@ namespace Game.AI
                 case SmartActions.Talk:
                     {
                         List<WorldObject> targets = GetTargets(e, unit);
-                        Creature talker = me;
-                        Player targetPlayer = null;
+                        Creature talker = e.Target.type == 0 ? me : null;
                         Unit talkTarget = null;
 
                         if (!targets.Empty())
@@ -114,30 +113,32 @@ namespace Game.AI
                                 if (IsCreature(obj) && !obj.ToCreature().IsPet()) // Prevented sending text to pets.
                                 {
                                     if (e.Action.talk.useTalkTarget != 0)
+                                    {
+                                        talker = me;
                                         talkTarget = obj.ToCreature();
+                                    }
                                     else
                                         talker = obj.ToCreature();
                                     break;
                                 }
                                 else if (IsPlayer(obj))
                                 {
-                                    targetPlayer = obj.ToPlayer();
+                                    talker = me;
+                                    talkTarget = obj.ToPlayer();
                                     break;
                                 }
                             }
                         }
 
-                        if (!talker)
+                        if (talkTarget == null)
+                            talkTarget = GetLastInvoker();
+
+                        if (talker == null)
                             break;
 
                         mTalkerEntry = talker.GetEntry();
                         mLastTextID = e.Action.talk.textGroupId;
                         mTextTimer = e.Action.talk.duration;
-
-                        if (IsPlayer(GetLastInvoker())) // used for $vars in texts and whisper target
-                            talkTarget = GetLastInvoker();
-                        else if (targetPlayer != null)
-                            talkTarget = targetPlayer;
 
                         mUseTextTimer = true;
                         Global.CreatureTextMgr.SendChat(talker, (byte)e.Action.talk.textGroupId, talkTarget);
@@ -391,13 +392,13 @@ namespace Game.AI
                         if (me == null)
                             break;
 
-                        var threatList = me.GetThreatManager().getThreatList();
+                        var threatList = me.GetThreatManager().GetThreatList();
                         foreach (var refe in threatList)
                         {
-                            Unit target = Global.ObjAccessor.GetUnit(me, refe.getUnitGuid());
+                            Unit target = Global.ObjAccessor.GetUnit(me, refe.GetUnitGuid());
                             if (target != null)
                             {
-                                me.GetThreatManager().modifyThreatPercent(target, e.Action.threatPCT.threatINC != 0 ? (int)e.Action.threatPCT.threatINC : -(int)e.Action.threatPCT.threatDEC);
+                                me.GetThreatManager().ModifyThreatPercent(target, e.Action.threatPCT.threatINC != 0 ? (int)e.Action.threatPCT.threatINC : -(int)e.Action.threatPCT.threatDEC);
                                 Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction. SMART_ACTION_THREAT_ALL_PCT: Creature guidLow {0} modify threat for unit {1}, value {2}",
                                     me.GetGUID().ToString(), target.GetGUID().ToString(), e.Action.threatPCT.threatINC != 0 ? (int)e.Action.threatPCT.threatINC : -(int)e.Action.threatPCT.threatDEC);
                             }
@@ -417,7 +418,7 @@ namespace Game.AI
                         {
                             if (IsUnit(obj))
                             {
-                                me.GetThreatManager().modifyThreatPercent(obj.ToUnit(), e.Action.threatPCT.threatINC != 0 ? (int)e.Action.threatPCT.threatINC : -(int)e.Action.threatPCT.threatDEC);
+                                me.GetThreatManager().ModifyThreatPercent(obj.ToUnit(), e.Action.threatPCT.threatINC != 0 ? (int)e.Action.threatPCT.threatINC : -(int)e.Action.threatPCT.threatDEC);
                                 Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction. SMART_ACTION_THREAT_SINGLE_PCT: Creature guidLow {0} modify threat for unit {1}, value {2}",
                                     me.GetGUID().ToString(), obj.GetGUID().ToString(), e.Action.threatPCT.threatINC != 0 ? (int)e.Action.threatPCT.threatINC : -(int)e.Action.threatPCT.threatDEC);
                             }
@@ -464,8 +465,17 @@ namespace Game.AI
                         if (targets.Empty())
                             break;
 
+                        if (e.Action.cast.targetsLimit > 0 && targets.Count > e.Action.cast.targetsLimit)
+                            targets.RandomResize(e.Action.cast.targetsLimit);
+
                         foreach (var obj in targets)
                         {
+                            if (go)
+                            {
+                                // may be nullptr
+                                go.CastSpell(obj.ToUnit(), e.Action.cast.spell);
+                            }
+
                             if (!IsUnit(obj))
                                 continue;
 
@@ -547,6 +557,9 @@ namespace Game.AI
                         List<WorldObject> targets = GetTargets(e, unit);
                         if (targets.Empty())
                             break;
+
+                        if (e.Action.cast.targetsLimit > 0 && targets.Count > e.Action.cast.targetsLimit)
+                            targets.RandomResize(e.Action.cast.targetsLimit);
 
                         foreach (var obj in targets)
                         {
@@ -748,8 +761,8 @@ namespace Game.AI
                         if (GetBaseObject() == null)
                             break;
 
-                        IncPhase((int)e.Action.incEventPhase.inc);
-                        DecPhase((int)e.Action.incEventPhase.dec);
+                        IncPhase(e.Action.incEventPhase.inc);
+                        DecPhase(e.Action.incEventPhase.dec);
                         Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction. SMART_ACTION_INC_EVENT_PHASE: Creature {0} inc event phase by {1}, " +
                             "decrease by {2}", GetBaseObject().GetGUID().ToString(), e.Action.incEventPhase.inc, e.Action.incEventPhase.dec);
                         break;
@@ -769,7 +782,7 @@ namespace Game.AI
                             break;
 
                         me.DoFleeToGetAssistance();
-                        if (e.Action.flee.withEmote != 0)
+                        if (e.Action.fleeAssist.withEmote != 0)
                         {
                             var builder = new BroadcastTextBuilder(me, ChatMsg.MonsterEmote, (uint)BroadcastTextIds.FleeForAssist, me.GetGender());
                             Global.CreatureTextMgr.SendChatPacket(me, builder, ChatMsg.Emote);
@@ -782,9 +795,11 @@ namespace Game.AI
                         if (unit == null)
                             break;
 
-                        if (IsPlayer(unit) && GetBaseObject() != null)
+                        // If invoker was pet or charm
+                        Player player = unit.GetCharmerOrOwnerPlayerOrPlayerItself();
+                        if (player && GetBaseObject() != null)
                         {
-                            unit.ToPlayer().GroupEventHappens(e.Action.quest.questId, GetBaseObject());
+                            player.GroupEventHappens(e.Action.quest.questId, GetBaseObject());
                             Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction: SMART_ACTION_CALL_GROUPEVENTHAPPENS: Player {0}, group credit for quest {1}",
                                 unit.GetGUID().ToString(), e.Action.quest.questId);
                         }
@@ -795,9 +810,9 @@ namespace Game.AI
                         {
                             foreach (var seat in vehicle.Seats)
                             {
-                                Player player = Global.ObjAccessor.GetPlayer(unit, seat.Value.Passenger.Guid);
-                                if (player != null)
-                                    player.GroupEventHappens(e.Action.quest.questId, GetBaseObject());
+                                Player player1 = Global.ObjAccessor.GetPlayer(unit, seat.Value.Passenger.Guid);
+                                if (player1 != null)
+                                    player1.GroupEventHappens(e.Action.quest.questId, GetBaseObject());
                             }
                         }
                         break;
@@ -811,7 +826,7 @@ namespace Game.AI
                         Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction: SMART_ACTION_COMBAT_STOP: {0} CombatStop", me.GetGUID().ToString());
                         break;
                     }
-                case SmartActions.Removeaurasfromspell:
+                case SmartActions.RemoveAurasFromSpell:
                     {
                         List<WorldObject> targets = GetTargets(e, unit);
                         if (targets.Empty())
@@ -841,13 +856,17 @@ namespace Game.AI
 
                         List<WorldObject> targets = GetTargets(e, unit);
                         if (targets.Empty())
+                        {
+                            ((SmartAI)me.GetAI()).StopFollow(false);
                             break;
+                        }
 
                         foreach (var obj in targets)
                         {
                             if (IsUnit(obj))
                             {
-                                ((SmartAI)me.GetAI()).SetFollow(obj.ToUnit(), e.Action.follow.dist, e.Action.follow.angle, e.Action.follow.credit, e.Action.follow.entry, e.Action.follow.creditType);
+                                float angle = e.Action.follow.angle > 6 ? (e.Action.follow.angle * (float)Math.PI / 180.0f) : e.Action.follow.angle;
+                                ((SmartAI)me.GetAI()).SetFollow(obj.ToUnit(), e.Action.follow.dist + 0.1f, angle, e.Action.follow.credit, e.Action.follow.entry, e.Action.follow.creditType);
                                 Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction: SMART_ACTION_FOLLOW: Creature {0} following target {1}",
                                     me.GetGUID().ToString(), obj.GetGUID().ToString());
                                 break;
@@ -1012,7 +1031,7 @@ namespace Game.AI
 
                         foreach (var obj in targets)
                             if (IsCreature(obj))
-                                obj.ToCreature().UpdateEntry(e.Action.updateTemplate.creature, null, e.Action.updateTemplate.updateLevel != 0);
+                                obj.ToCreature().UpdateEntry(e.Action.updateTemplate.creature, obj.ToCreature().GetCreatureData(), e.Action.updateTemplate.updateLevel != 0);
                         break;
                     }
                 case SmartActions.Die:
@@ -1026,24 +1045,39 @@ namespace Game.AI
                     }
                 case SmartActions.SetInCombatWithZone:
                     {
-                        if (me != null)
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
                         {
-                            me.SetInCombatWithZone();
-                            Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction: SMART_ACTION_SET_IN_COMBAT_WITH_ZONE: Creature {0}", me.GetGUID().ToString());
+                            if (IsCreature(obj))
+                            {
+                                me.SetInCombatWithZone();
+                                Log.outDebug(LogFilter.ScriptsAi, $"SmartScript.ProcessAction: SMART_ACTION_SET_IN_COMBAT_WITH_ZONE: Creature: {me.GetGUID().ToString()}, Target: {obj.GetGUID().ToString()}");
+                            }
                         }
+
                         break;
                     }
                 case SmartActions.CallForHelp:
                     {
-                        if (me != null)
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
                         {
-                            me.CallForHelp(e.Action.callHelp.range);
-                            if (e.Action.callHelp.withEmote != 0)
+                            if (IsCreature(obj))
                             {
-                                var builder = new BroadcastTextBuilder(me, ChatMsg.Emote, (uint)BroadcastTextIds.CallForHelp, me.GetGender());
-                                Global.CreatureTextMgr.SendChatPacket(me, builder, ChatMsg.MonsterEmote);
+                                obj.ToCreature().CallForHelp(e.Action.callHelp.range);
+                                if (e.Action.callHelp.withEmote != 0)
+                                {
+                                    var builder = new BroadcastTextBuilder(me, ChatMsg.Emote, (uint)BroadcastTextIds.CallForHelp, me.GetGender());
+                                    Global.CreatureTextMgr.SendChatPacket(me, builder, ChatMsg.MonsterEmote);
+                                }
+                                Log.outDebug(LogFilter.ScriptsAi, $"SmartScript.ProcessAction: SMART_ACTION_CALL_FOR_HELP: Creature: {me.GetGUID().ToString()}, Target: {obj.GetGUID().ToString()}");
                             }
-                            Log.outDebug(LogFilter.ScriptsAi, "SmartScript.ProcessAction: SMART_ACTION_CALL_FOR_HELP: Creature {0}", me.GetGUID().ToString());
                         }
                         break;
                     }
@@ -1156,18 +1190,25 @@ namespace Game.AI
                     }
                 case SmartActions.SetInvincibilityHpLevel:
                     {
-                        if (me == null)
+                        List<WorldObject> targets = GetTargets(e, unit);
+                        if (targets.Empty())
                             break;
 
-                        SmartAI ai = ((SmartAI)me.GetAI());
+                        foreach (var obj in targets)
+                        {
+                            if (IsCreature(obj))
+                            {
+                                SmartAI ai = (SmartAI)me.GetAI();
+                                if (ai == null)
+                                    continue;
 
-                        if (ai == null)
-                            break;
+                                if (e.Action.invincHP.percent != 0)
+                                    ai.SetInvincibilityHpLevel((uint)obj.ToCreature().CountPctFromMaxHealth((int)e.Action.invincHP.percent));
+                                else
+                                    ai.SetInvincibilityHpLevel(e.Action.invincHP.minHP);
+                            }
+                        }
 
-                        if (e.Action.invincHP.percent != 0)
-                            ai.SetInvincibilityHpLevel((uint)me.CountPctFromMaxHealth((int)e.Action.invincHP.percent));
-                        else
-                            ai.SetInvincibilityHpLevel(e.Action.invincHP.minHP);
                         break;
                     }
                 case SmartActions.SetData:
@@ -1214,15 +1255,25 @@ namespace Game.AI
                     }
                 case SmartActions.SetVisibility:
                     {
-                        if (me != null)
-                            me.SetVisible(Convert.ToBoolean(e.Action.visibility.state));
+                        List<WorldObject> targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            if (IsUnit(obj))
+                                obj.ToUnit().SetVisible(e.Action.visibility.state != 0);
+
                         break;
                     }
                 case SmartActions.SetActive:
                     {
-                        WorldObject baseObj = GetBaseObject();
-                        if (baseObj != null)
-                            baseObj.setActive(e.Action.active.state != 0);
+                        List<WorldObject> targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            obj.SetActive(e.Action.active.state != 0);
+
                         break;
                     }
                 case SmartActions.AttackStart:
@@ -1234,15 +1285,9 @@ namespace Game.AI
                         if (targets.Empty())
                             break;
 
-                        foreach (var obj in targets)
-                        {
-                            if (IsUnit(obj))
-                            {
-                                me.GetAI().AttackStart(obj.ToUnit());
-                                break;
-                            }
-                        }
-
+                        Unit target = targets.SelectRandom().ToUnit();
+                        if (target != null)
+                            me.GetAI().AttackStart(target);
 
                         break;
                     }
@@ -1290,20 +1335,19 @@ namespace Game.AI
                         {
                             foreach (var obj in targets)
                             {
-                                if (!IsUnit(obj))
-                                    continue;
+                                // allow gameobjects to summon gameobjects
+                                //if (!IsUnit(*itr))
+                                //    continue;
 
                                 Position pos = obj.GetPositionWithOffset(new Position(e.Target.x, e.Target.y, e.Target.z, e.Target.o));
-                                Quaternion rot = Quaternion.fromEulerAnglesZYX(pos.GetOrientation(), 0.0f, 0.0f);
-                                summoner.SummonGameObject(e.Action.summonGO.entry, pos, rot, e.Action.summonGO.despawnTime);
+                                summoner.SummonGameObject(e.Action.summonGO.entry, pos, Quaternion.fromEulerAnglesZYX(pos.GetOrientation(), 0.0f, 0.0f), e.Action.summonGO.despawnTime);
                             }
                         }
 
                         if (e.GetTargetType() != SmartTargets.Position)
                             break;
 
-                        Quaternion rot1 = Quaternion.fromEulerAnglesZYX(e.Target.o, 0.0f, 0.0f);
-                        summoner.SummonGameObject(e.Action.summonGO.entry, new Position(e.Target.x, e.Target.y, e.Target.z, e.Target.o), rot1, e.Action.summonGO.despawnTime);
+                        summoner.SummonGameObject(e.Action.summonGO.entry, new Position(e.Target.x, e.Target.y, e.Target.z, e.Target.o), Quaternion.fromEulerAnglesZYX(e.Target.o, 0.0f, 0.0f), e.Action.summonGO.despawnTime);
                         break;
                     }
                 case SmartActions.KillUnit:
@@ -1379,12 +1423,20 @@ namespace Game.AI
 
                         break;
                     }
-                case SmartActions.SetFly:
+                case SmartActions.SetDisableGravity:
                     {
                         if (!IsSmart())
                             break;
 
-                        ((SmartAI)me.GetAI()).SetFly(e.Action.setFly.fly != 0 ? true : false);
+                        ((SmartAI)me.GetAI()).SetDisableGravity(e.Action.setDisableGravity.disable != 0);
+                        break;
+                    }
+                case SmartActions.SetCanFly:
+                    {
+                        if (!IsSmart())
+                            break;
+
+                        ((SmartAI)me.GetAI()).SetCanFly(e.Action.setFly.fly != 0);
                         break;
                     }
                 case SmartActions.SetRun:
@@ -1438,11 +1490,24 @@ namespace Game.AI
                         if (!IsSmart())
                             break;
 
-                        bool run = e.Action.wpStart.run != 0 ? true : false;
+                        bool run = e.Action.wpStart.run != 0;
                         uint entry = e.Action.wpStart.pathID;
-                        bool repeat = e.Action.wpStart.repeat != 0 ? true : false;
+                        bool repeat = e.Action.wpStart.repeat != 0;
+
+                        // ensure that SMART_ESCORT_TARGETS contains at least one player reference
                         List<WorldObject> targets = GetTargets(e, unit);
-                        StoreTargetList(targets, SharedConst.SmartEscortTargets);
+                        if (!targets.Empty())
+                        {
+                            foreach (var obj in targets)
+                            {
+                                if (IsPlayer(obj))
+                                {
+                                    StoreTargetList(targets, SharedConst.SmartEscortTargets);
+                                    break;
+                                }
+                            }
+                        }
+
                         me.SetReactState((ReactStates)e.Action.wpStart.reactState);
                         ((SmartAI)me.GetAI()).StartPath(run, entry, repeat, unit);
 
@@ -1477,7 +1542,7 @@ namespace Game.AI
                         if (!IsSmart())
                             break;
 
-                        ((SmartAI)me.GetAI()).ResumePath();
+                        ((SmartAI)me.GetAI()).SetWPPauseTimer(0);
                         break;
                     }
                 case SmartActions.SetOrientation:
@@ -1520,34 +1585,32 @@ namespace Game.AI
 
                         WorldObject target = null;
 
-                        if (e.GetTargetType() == SmartTargets.CreatureRange || e.GetTargetType() == SmartTargets.CreatureGuid ||
+                        /*if (e.GetTargetType() == SmartTargets.CreatureRange || e.GetTargetType() == SmartTargets.CreatureGuid ||
                             e.GetTargetType() == SmartTargets.CreatureDistance || e.GetTargetType() == SmartTargets.GameobjectRange ||
                             e.GetTargetType() == SmartTargets.GameobjectGuid || e.GetTargetType() == SmartTargets.GameobjectDistance ||
                             e.GetTargetType() == SmartTargets.ClosestCreature || e.GetTargetType() == SmartTargets.ClosestGameobject ||
                             e.GetTargetType() == SmartTargets.OwnerOrSummoner || e.GetTargetType() == SmartTargets.ActionInvoker ||
-                            e.GetTargetType() == SmartTargets.ClosestEnemy || e.GetTargetType() == SmartTargets.ClosestFriendly)
+                            e.GetTargetType() == SmartTargets.ClosestEnemy || e.GetTargetType() == SmartTargets.ClosestFriendly)*/
                         {
                             List<WorldObject> targets = GetTargets(e, unit);
                             if (targets.Empty())
                                 break;
 
-                            target = targets.First();
+                            // we want to move to random element
+                            target = targets.SelectRandom();
                         }
 
                         if (!target)
                         {
-                            float x = e.Target.x;
-                            float y = e.Target.y;
-                            float z = e.Target.z;
-                            float o = 0;
+                            Position dest = new Position(e.Target.x, e.Target.y, e.Target.z);
                             if (e.Action.moveToPos.transport != 0)
                             {
                                 ITransport trans = me.GetDirectTransport();
                                 if (trans != null)
-                                    trans.CalculatePassengerPosition(ref x, ref y, ref z, ref o);
+                                    trans.CalculatePassengerPosition(ref dest.posX, ref dest.posY, ref dest.posZ, ref dest.Orientation);
                             }
 
-                            me.GetMotionMaster().MovePoint(e.Action.moveToPos.pointId, x, y, z, e.Action.moveToPos.disablePathfinding == 0);
+                            me.GetMotionMaster().MovePoint(e.Action.moveToPos.pointId, dest, e.Action.moveToPos.disablePathfinding == 0);
                         }
                         else
                         {
@@ -1555,7 +1618,7 @@ namespace Game.AI
                             target.GetPosition(out x, out y, out z);
                             if (e.Action.moveToPos.contactDistance > 0)
                                 target.GetContactPoint(me, out x, out y, out z, e.Action.moveToPos.contactDistance);
-                            me.GetMotionMaster().MovePoint(e.Action.moveToPos.pointId, x, y, z, e.Action.moveToPos.disablePathfinding == 0);
+                            me.GetMotionMaster().MovePoint(e.Action.moveToPos.pointId, x + e.Target.x, y + e.Target.y, z + e.Target.z, e.Action.moveToPos.disablePathfinding == 0);
                         }
                         break;
                     }
@@ -1570,9 +1633,14 @@ namespace Game.AI
                             if (IsCreature(obj))
                                 obj.ToCreature().Respawn();
                             else if (IsGameObject(obj))
-                                obj.ToGameObject().SetRespawnTime((int)e.Action.respawnTarget.goRespawnTime);
+                            {
+                                // do not modify respawndelay of already spawned gameobjects
+                                if (obj.ToGameObject().IsSpawnedByDefault())
+                                    obj.ToGameObject().Respawn();
+                                else
+                                    obj.ToGameObject().SetRespawnTime((int)e.Action.respawnTarget.goRespawnTime);
+                            }
                         }
-
 
                         break;
                     }
@@ -1664,6 +1732,10 @@ namespace Game.AI
                     }
                 case SmartActions.TriggerTimedEvent:
                     ProcessEventsFor(SmartEvents.TimedEventTriggered, null, e.Action.timeEvent.id);
+
+                    // remove this event if not repeatable
+                    if (e.Event.event_flags.HasAnyFlag(SmartEventFlags.NotRepeatable))
+                        mRemIDs.Add(e.Action.timeEvent.id);
                     break;
                 case SmartActions.RemoveTimedEvent:
                     mRemIDs.Add(e.Action.timeEvent.id);
@@ -2184,7 +2256,7 @@ namespace Game.AI
 
                         foreach (var obj in targets)
                             if (IsCreature(obj))
-                                obj.ToCreature().setRegeneratingHealth(e.Action.setHealthRegen.regenHealth != 0 ? true : false);
+                                obj.ToCreature().SetRegeneratingHealth(e.Action.setHealthRegen.regenHealth != 0 ? true : false);
                         break;
                     }
                 case SmartActions.SetRoot:
@@ -2293,6 +2365,58 @@ namespace Game.AI
                         Global.GameEventMgr.StartEvent(eventId, true);
                         break;
                     }
+                case SmartActions.StartClosestWaypoint:
+                    {
+                        uint[] waypoints = new uint[SharedConst.SmartActionParamCount];
+                        waypoints[0] = e.Action.closestWaypointFromList.wp1;
+                        waypoints[1] = e.Action.closestWaypointFromList.wp2;
+                        waypoints[2] = e.Action.closestWaypointFromList.wp3;
+                        waypoints[3] = e.Action.closestWaypointFromList.wp4;
+                        waypoints[4] = e.Action.closestWaypointFromList.wp5;
+                        waypoints[5] = e.Action.closestWaypointFromList.wp6;
+                        float distanceToClosest = float.MaxValue;
+                        WayPoint closestWp = null;
+
+                        var targets = GetTargets(e, unit);
+                        if (!targets.Empty())
+                        {
+                            foreach (var obj in targets)
+                            {
+                                Creature target = obj.ToCreature();
+                                if (target != null)
+                                {
+                                    if (IsSmart(target))
+                                    {
+                                        for (byte i = 0; i < SharedConst.SmartActionParamCount; i++)
+                                        {
+                                            if (waypoints[i] == 0)
+                                                continue;
+
+                                            var path = Global.SmartAIMgr.GetPath(waypoints[i]);
+                                            if (path == null || path.Empty())
+                                                continue;
+
+                                            WayPoint wp = path[0];
+                                            if (wp != null)
+                                            {
+                                                float distToThisPath = target.GetDistance(wp.X, wp.Y, wp.Z);
+
+                                                if (distToThisPath < distanceToClosest)
+                                                {
+                                                    distanceToClosest = distToThisPath;
+                                                    closestWp = wp;
+                                                }
+                                            }
+                                        }
+
+                                        if (closestWp != null)
+                                            ((SmartAI)target.GetAI()).StartPath(false, closestWp.Id, true);
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
                 case SmartActions.RandomSound:
                     {
                         uint[] sounds = new uint[SharedConst.SmartActionParamCount - 1];
@@ -2305,7 +2429,7 @@ namespace Game.AI
                         bool onlySelf = e.Action.randomSound.onlySelf != 0;
 
                         var targets = GetTargets(e, unit);
-                        if (targets != null)
+                        if (!targets.Empty())
                         {
                             foreach (var obj in targets)
                             {
@@ -2323,7 +2447,7 @@ namespace Game.AI
                 case SmartActions.SetCorpseDelay:
                     {
                         var targets = GetTargets(e, unit);
-                        if (targets == null)
+                        if (targets.Empty())
                             break;
 
                         foreach (var obj in targets)
@@ -2340,6 +2464,104 @@ namespace Game.AI
                             break;
 
                         ((SmartAI)me.GetAI()).SetEvadeDisabled(e.Action.disableEvade.disable != 0);
+                        break;
+                    }
+                case SmartActions.RemoveAurasByType: // can be used to exit vehicle for example
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            if (IsUnit(obj))
+                                obj.ToUnit().RemoveAurasByType((AuraType)e.Action.auraType.type);
+
+                        break;
+                    }
+                case SmartActions.SetSightDist:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            if (IsCreature(obj))
+                                obj.ToCreature().m_SightDistance = e.Action.sightDistance.dist;
+
+                        break;
+                    }
+                case SmartActions.Flee:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            if (IsCreature(obj))
+                                obj.ToCreature().GetMotionMaster().MoveFleeing(me, e.Action.flee.fleeTime);
+
+                        break;
+                    }
+                case SmartActions.AddThreat:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            if (IsUnit(obj))
+                                me.AddThreat(obj.ToUnit(), (float)e.Action.threatPCT.threatINC - (float)e.Action.threatPCT.threatDEC);
+
+                        break;
+                    }
+                case SmartActions.LoadEquipment:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            if (IsCreature(obj))
+                                obj.ToCreature().LoadEquipment((int)e.Action.loadEquipment.id, e.Action.loadEquipment.force != 0);
+
+                        break;
+                    }
+                case SmartActions.TriggerRandomTimedEvent:
+                    {
+                        uint eventId = RandomHelper.URand(e.Action.randomTimedEvent.minId, e.Action.randomTimedEvent.maxId);
+                        ProcessEventsFor(SmartEvents.TimedEventTriggered, null, eventId);
+                        break;
+                    }
+
+                case SmartActions.RemoveAllGameobjects:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                            if (IsUnit(obj))
+                                obj.ToUnit().RemoveAllGameObjects();
+
+                        break;
+                    }
+                case SmartActions.StopMotion:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                        {
+                            if (IsUnit(obj))
+                            {
+                                if (e.Action.stopMotion.stopMovement != 0)
+                                    obj.ToUnit().StopMoving();
+                                if (e.Action.stopMotion.movementExpired != 0)
+                                    obj.ToUnit().GetMotionMaster().MovementExpired();
+                            }
+                        }
+
                         break;
                     }
                 case SmartActions.PlayAnimkit:
@@ -2402,6 +2624,39 @@ namespace Game.AI
 
                         break;
                     }
+                case SmartActions.SetMovementSpeed:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        uint speedInteger = e.Action.movementSpeed.speedInteger;
+                        uint speedFraction = e.Action.movementSpeed.speedFraction;
+                        float speed = (float)((float)speedInteger + (float)speedFraction / Math.Pow(10, Math.Floor(Math.Log10((float)(speedFraction != 0 ? speedFraction : 1)) + 1)));
+
+                        foreach (WorldObject target in targets)
+                            if (IsCreature(target))
+                                me.SetSpeed((UnitMoveType)e.Action.movementSpeed.movementType, speed);
+
+                        break;
+                    }
+                case SmartActions.PlaySpellVisualKit:
+                    {
+                        var targets = GetTargets(e, unit);
+                        if (targets.Empty())
+                            break;
+
+                        foreach (var obj in targets)
+                        {
+                            if (IsUnit(obj))
+                            {
+                                obj.ToUnit().SendPlaySpellVisualKit(e.Action.spellVisualKit.spellVisualKitId, e.Action.spellVisualKit.kitType, e.Action.spellVisualKit.duration);
+
+                                Log.outDebug(LogFilter.ScriptsAi, $"SmartScript.ProcessAction:: SMART_ACTION_PLAY_SPELL_VISUAL_KIT: target: {obj.GetName()} ({obj.GetGUID().ToString()}), SpellVisualKit: {e.Action.spellVisualKit.spellVisualKitId}");
+                            }
+                        }
+                        break;
+                    }
                 default:
                     Log.outError(LogFilter.Sql, "SmartScript.ProcessAction: Entry {0} SourceType {1}, Event {2}, Unhandled Action type {3}", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType());
                     break;
@@ -2419,10 +2674,15 @@ namespace Game.AI
 
         void ProcessTimedAction(SmartScriptHolder e, uint min, uint max, Unit unit = null, uint var0 = 0, uint var1 = 0, bool bvar = false, SpellInfo spell = null, GameObject gob = null, string varString = "")
         {
+            // We may want to execute action rarely and because of this if condition is not fulfilled the action will be rechecked in a long time
             if (Global.ConditionMgr.IsObjectMeetingSmartEventConditions(e.entryOrGuid, e.event_id, e.source_type, unit, GetBaseObject()))
+            {
                 ProcessAction(e, unit, var0, var1, bvar, spell, gob, varString);
 
-            RecalcTimer(e, min, max);
+                RecalcTimer(e, min, max);
+            }
+            else
+                RecalcTimer(e, Math.Min(min, 5000), Math.Min(min, 5000));
         }
 
         void InstallTemplate(SmartScriptHolder e)
@@ -2563,36 +2823,79 @@ namespace Game.AI
                 case SmartTargets.HostileSecondAggro:
                     if (me != null)
                     {
-                        Unit u = me.GetAI().SelectTarget(SelectAggroTarget.TopAggro, 1);
-                        if (u != null)
-                            l.Add(u);
+                        if (e.Target.hostilRandom.powerType != 0)
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.TopAggro, 1, new PowerUsersSelector(me, (PowerType)(e.Target.hostilRandom.powerType - 1), (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0));
+                            if (u != null)
+                                l.Add(u);
+                        }
+                        else
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.TopAggro, 1, (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0);
+                            if (u != null)
+                                l.Add(u);
+                        }
                     }
                     break;
                 case SmartTargets.HostileLastAggro:
                     if (me != null)
                     {
-                        Unit u = me.GetAI().SelectTarget(SelectAggroTarget.BottomAggro, 0);
-                        if (u != null)
-                            l.Add(u);
+                        if (e.Target.hostilRandom.powerType != 0)
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.BottomAggro, 1, new PowerUsersSelector(me, (PowerType)(e.Target.hostilRandom.powerType - 1), (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0));
+                            if (u != null)
+                                l.Add(u);
+                        }
+                        else
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.BottomAggro, 1, (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0);
+                            if (u != null)
+                                l.Add(u);
+                        }
                     }
                     break;
                 case SmartTargets.HostileRandom:
                     if (me != null)
                     {
-                        Unit u = me.GetAI().SelectTarget(SelectAggroTarget.Random, 0);
-                        if (u != null)
-                            l.Add(u);
+                        if (e.Target.hostilRandom.powerType != 0)
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.Random, 1, new PowerUsersSelector(me, (PowerType)(e.Target.hostilRandom.powerType - 1), (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0));
+                            if (u != null)
+                                l.Add(u);
+                        }
+                        else
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.Random, 1, (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0);
+                            if (u != null)
+                                l.Add(u);
+                        }
                     }
                     break;
                 case SmartTargets.HostileRandomNotTop:
                     if (me != null)
                     {
-                        Unit u = me.GetAI().SelectTarget(SelectAggroTarget.Random, 1);
+                        if (e.Target.hostilRandom.powerType != 0)
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.Random, 1, new PowerUsersSelector(me, (PowerType)(e.Target.hostilRandom.powerType - 1), (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0));
+                            if (u != null)
+                                l.Add(u);
+                        }
+                        else
+                        {
+                            Unit u = me.GetAI().SelectTarget(SelectAggroTarget.Random, 1, (float)e.Target.hostilRandom.maxDist, e.Target.hostilRandom.playerOnly != 0);
+                            if (u != null)
+                                l.Add(u);
+                        }
+                    }
+                    break;
+                case SmartTargets.Farthest:
+                    if (me)
+                    {
+                        Unit u = me.GetAI().SelectTarget(SelectAggroTarget.Farthest, 0, new FarthestTargetSelector(me, (float)e.Target.farthest.maxDist, e.Target.farthest.playerOnly != 0, e.Target.farthest.isInLos != 0));
                         if (u != null)
                             l.Add(u);
                     }
                     break;
-                case SmartTargets.None:
                 case SmartTargets.ActionInvoker:
                     if (scriptTrigger != null)
                         l.Add(scriptTrigger);
@@ -2610,7 +2913,7 @@ namespace Game.AI
                             Group group = player.GetGroup();
                             if (group)
                             {
-                                for (GroupReference groupRef = group.GetFirstMember(); groupRef != null; groupRef = groupRef.next())
+                                for (GroupReference groupRef = group.GetFirstMember(); groupRef != null; groupRef = groupRef.Next())
                                 {
                                     Player member = groupRef.GetSource();
                                     if (member)
@@ -2742,7 +3045,7 @@ namespace Game.AI
                         if (!list.Empty())
                             l.AddRange(list);
 
-                        return l;
+                        break;
                     }
                 case SmartTargets.ClosestCreature:
                     {
@@ -2760,9 +3063,10 @@ namespace Game.AI
                     }
                 case SmartTargets.ClosestPlayer:
                     {
-                        if (me)
+                        WorldObject obj = GetBaseObject();
+                        if (obj != null)
                         {
-                            Player target = me.SelectNearestPlayer(e.Target.playerDistance.dist);
+                            Player target = obj.SelectNearestPlayer(e.Target.playerDistance.dist);
                             if (target)
                                 l.Add(target);
                         }
@@ -2791,18 +3095,36 @@ namespace Game.AI
                             if (owner != null)
                                 l.Add(owner);
                         }
+                        else if (go != null)
+                        {
+                            Unit owner = Global.ObjAccessor.GetUnit(go, go.GetOwnerGUID());
+                            if (owner)
+                                l.Add(owner);
+                        }
+
+                        // Get owner of owner
+                        if (e.Target.owner.useCharmerOrOwner != 0 && !l.Empty())
+                        {
+                            Unit owner = l.First().ToUnit();
+                            l.Clear();
+
+                            Unit unitBase = Global.ObjAccessor.GetUnit(owner, owner.GetCharmerOrOwnerGUID());
+                            if (unitBase != null)
+                                l.Add(unitBase);
+                        }
                         break;
                     }
                 case SmartTargets.ThreatList:
                     {
                         if (me != null)
                         {
-                            var threatList = me.GetThreatManager().getThreatList();
+                            var threatList = me.GetThreatManager().GetThreatList();
                             foreach (var i in threatList)
                             {
-                                Unit temp = Global.ObjAccessor.GetUnit(me, i.getUnitGuid());
+                                Unit temp = Global.ObjAccessor.GetUnit(me, i.GetUnitGuid());
                                 if (temp != null)
-                                    l.Add(temp);
+                                    if (e.Target.hostilRandom.maxDist == 0 || me.IsWithinCombatRange(temp, (float)e.Target.hostilRandom.maxDist))
+                                        l.Add(temp);
                             }
                         }
                         break;
@@ -2835,7 +3157,7 @@ namespace Game.AI
                             Group lootGroup = me.GetLootRecipientGroup();
                             if (lootGroup)
                             {
-                                for (GroupReference refe = lootGroup.GetFirstMember(); refe != null; refe = refe.next())
+                                for (GroupReference refe = lootGroup.GetFirstMember(); refe != null; refe = refe.Next())
                                 {
                                     Player recipient = refe.GetSource();
                                     if (recipient)
@@ -2919,7 +3241,7 @@ namespace Game.AI
                         return;
                     ProcessTimedAction(e, e.Event.minMaxRepeat.repeatMin, e.Event.minMaxRepeat.repeatMax);
                     break;
-                case SmartEvents.HealtPct:
+                case SmartEvents.HealthPct:
                     {
                         if (me == null || !me.IsInCombat() || me.GetMaxHealth() == 0)
                             return;
@@ -2966,6 +3288,8 @@ namespace Game.AI
 
                         if (me.IsInRange(me.GetVictim(), e.Event.minMaxRepeat.min, e.Event.minMaxRepeat.max))
                             ProcessTimedAction(e, e.Event.minMaxRepeat.repeatMin, e.Event.minMaxRepeat.repeatMax, me.GetVictim());
+                        else // make it predictable
+                            RecalcTimer(e, 500, 500);
                         break;
                     }
                 case SmartEvents.VictimCasting:
@@ -2996,7 +3320,12 @@ namespace Game.AI
 
                         Unit target = DoSelectLowestHpFriendly(e.Event.friendlyHealth.radius, e.Event.friendlyHealth.hpDeficit);
                         if (target == null || !target.IsInCombat())
+                        {
+                            // if there are at least two same npcs, they will perform the same action immediately even if this is useless...
+                            RecalcTimer(e, 1000, 3000);
                             return;
+                        }
+
                         ProcessTimedAction(e, e.Event.friendlyHealth.repeatMin, e.Event.friendlyHealth.repeatMax, target);
                         break;
                     }
@@ -3008,7 +3337,12 @@ namespace Game.AI
                         List<Creature> pList = new List<Creature>();
                         DoFindFriendlyCC(pList, e.Event.friendlyCC.radius);
                         if (pList.Empty())
+                        {
+                            // if there are at least two same npcs, they will perform the same action immediately even if this is useless...
+                            RecalcTimer(e, 1000, 3000);
                             return;
+                        }
+
                         ProcessTimedAction(e, e.Event.friendlyCC.repeatMin, e.Event.friendlyCC.repeatMax, pList.First());
                         break;
                     }
@@ -3020,7 +3354,7 @@ namespace Game.AI
                         if (pList.Empty())
                             return;
 
-                        ProcessTimedAction(e, e.Event.missingBuff.repeatMin, e.Event.missingBuff.repeatMax, pList.First());
+                        ProcessTimedAction(e, e.Event.missingBuff.repeatMin, e.Event.missingBuff.repeatMax, pList.SelectRandom());
                         break;
                     }
                 case SmartEvents.HasAura:
@@ -3066,11 +3400,17 @@ namespace Game.AI
                 case SmartEvents.JustSummoned:
                 case SmartEvents.Reset:
                 case SmartEvents.JustCreated:
-                case SmartEvents.GossipHello:
                 case SmartEvents.FollowCompleted:
                 case SmartEvents.OnSpellclick:
                     ProcessAction(e, unit, var0, var1, bvar, spell, gob);
                     break;
+                case SmartEvents.GossipHello:
+                    {
+                        if (e.Event.gossipHello.noReportUse != 0 && var0 != 0)
+                            return;
+                        ProcessAction(e, unit, var0, var1, bvar, spell, gob);
+                        break;
+                    }
                 case SmartEvents.IsBehindTarget:
                     {
                         if (me == null)
@@ -3214,6 +3554,13 @@ namespace Game.AI
                         break;
                     }
                 case SmartEvents.SummonDespawned:
+                    {
+                        if (e.Event.summoned.creature != 0 && e.Event.summoned.creature != var0)
+                            return;
+                        ProcessAction(e, unit, var0);
+                        RecalcTimer(e, e.Event.summoned.cooldownMin, e.Event.summoned.cooldownMax);
+                        break;
+                    }
                 case SmartEvents.InstancePlayerEnter:
                     {
                         if (e.Event.instancePlayerEnter.team != 0 && var0 != e.Event.instancePlayerEnter.team)
@@ -3428,8 +3775,10 @@ namespace Game.AI
                         break;
                     }
                 case SmartEvents.CounterSet:
-                    if (GetCounterId(e.Event.counter.id) != 0 && GetCounterValue(e.Event.counter.id) == e.Event.counter.value)
-                        ProcessTimedAction(e, e.Event.counter.cooldownMin, e.Event.counter.cooldownMax);
+                    if (e.Event.counter.id != var0 || GetCounterValue(e.Event.counter.id) != e.Event.counter.value)
+                        return;
+
+                    ProcessTimedAction(e, e.Event.counter.cooldownMin, e.Event.counter.cooldownMax);
                     break;
                 case SmartEvents.SceneStart:
                 case SmartEvents.SceneCancel:
@@ -3518,7 +3867,7 @@ namespace Game.AI
                 // Delay flee for assist event if stunned or rooted
                 if (e.GetActionType() == SmartActions.FleeForAssist)
                 {
-                    if (me && me.HasUnitState(UnitState.Root | UnitState.Stunned))
+                    if (me && me.HasUnitState(UnitState.Root | UnitState.LostControl))
                     {
                         e.timer = 1;
                         return;
@@ -3531,7 +3880,7 @@ namespace Game.AI
                     case SmartEvents.Update:
                     case SmartEvents.UpdateIc:
                     case SmartEvents.UpdateOoc:
-                    case SmartEvents.HealtPct:
+                    case SmartEvents.HealthPct:
                     case SmartEvents.TargetHealthPct:
                     case SmartEvents.ManaPct:
                     case SmartEvents.TargetManaPct:
@@ -3624,9 +3973,9 @@ namespace Game.AI
             if (!mRemIDs.Empty())
             {
                 foreach (var id in mRemIDs)
-                {
                     RemoveStoredEvent(id);
-                }
+
+                mRemIDs.Clear();
             }
             if (mUseTextTimer && me != null)
             {
@@ -4026,19 +4375,14 @@ namespace Game.AI
             if (mCounterList.ContainsKey(id))
             {
                 if (reset == 0)
-                    value += GetCounterValue(id);
-                mCounterList.Remove(id);
+                    mCounterList[id] += value;
+                else
+                    mCounterList[id] = value;
             }
+            else
+                mCounterList.Add(id, value);
 
-            mCounterList.Add(id, value);
-            ProcessEventsFor(SmartEvents.CounterSet);
-        }
-
-        uint GetCounterId(uint id)
-        {
-            if (mCounterList.ContainsKey(id))
-                return id;
-            return 0;
+            ProcessEventsFor(SmartEvents.CounterSet, null, id);
         }
 
         uint GetCounterValue(uint id)
@@ -4100,22 +4444,26 @@ namespace Game.AI
             meOrigGUID.Clear();
         }
 
-        void IncPhase(int p = 1)
+        void IncPhase(uint p)
         {
-            if (p >= 0)
-                mEventPhase += (uint)p;
-            else
-                DecPhase(-p);
+            // protect phase from overflowing
+            mEventPhase = Math.Min((uint)SmartPhase.Phase12, mEventPhase + p);
         }
 
-        void DecPhase(int p = 1)
+        void DecPhase(uint p)
         {
-            if (mEventPhase > p)
-                mEventPhase -= (uint)p;
-            else
+            if (p >= mEventPhase)
                 mEventPhase = 0;
+            else
+                mEventPhase -= p;
         }
-        bool IsInPhase(uint p) { return Convert.ToBoolean((1 << (int)(mEventPhase - 1)) & p); }
+        bool IsInPhase(uint p)
+        {
+            if (mEventPhase == 0)
+                return false;
+
+            return ((1 << (int)(mEventPhase - 1)) & p) != 0;
+        }
         void SetPhase(uint p = 0) { mEventPhase = p; }
 
         void RemoveStoredEvent(uint id)

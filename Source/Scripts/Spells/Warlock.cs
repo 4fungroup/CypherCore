@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -195,7 +195,7 @@ namespace Scripts.Spells.Warlock
             if (removeMode != AuraRemoveMode.Death || !IsExpired())
                 return;
 
-            if (GetCaster().ToPlayer().isHonorOrXPTarget(GetTarget()))
+            if (GetCaster().ToPlayer().IsHonorOrXPTarget(GetTarget()))
                 GetCaster().CastSpell(GetTarget(), SpellIds.BaneOfDoomEffect, true, null, aurEff);
         }
 
@@ -953,7 +953,7 @@ namespace Scripts.Spells.Warlock
             Unit caster = GetCaster();
             Unit target = GetHitUnit();
             if (target)
-                if (target.CanHaveThreatList() && target.GetThreatManager().getThreat(caster) > 0.0f)
+                if (target.CanHaveThreatList() && target.GetThreatManager().GetThreat(caster) > 0.0f)
                     caster.CastSpell(target, SpellIds.Soulshatter, true);
         }
 

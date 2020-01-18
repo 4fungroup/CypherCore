@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ using Game.Network;
 using Game.Network.Packets;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Game.BattleFields
 {
@@ -270,7 +269,7 @@ namespace Game.BattleFields
             }
 
             // If the player does not match minimal level requirements for the battlefield, kick him
-            if (player.getLevel() < m_MinLevel)
+            if (player.GetLevel() < m_MinLevel)
             {
                 if (!m_PlayersWillBeKick[player.GetTeamId()].ContainsKey(player.GetGUID()))
                     m_PlayersWillBeKick[player.GetTeamId()][player.GetGUID()] = Time.UnixTime + 10;
@@ -303,7 +302,7 @@ namespace Game.BattleFields
                 {
                     Player player = Global.ObjAccessor.FindPlayer(guid);
                     if (player)
-                        if (player.isAFK())
+                        if (player.IsAFK())
                             KickPlayerFromBattlefield(guid);
                 }
             }
@@ -402,7 +401,7 @@ namespace Game.BattleFields
                 m_PlayersInWar[player.GetTeamId()].Add(player.GetGUID());
                 m_InvitedPlayers[player.GetTeamId()].Remove(player.GetGUID());
 
-                if (player.isAFK())
+                if (player.IsAFK())
                     player.ToggleAFK();
 
                 OnPlayerJoinWar(player);                               //for scripting
@@ -597,7 +596,7 @@ namespace Game.BattleFields
             return null;
         }
 
-        public WorldSafeLocsRecord GetClosestGraveYard(Player player)
+        public WorldSafeLocsEntry GetClosestGraveYard(Player player)
         {
             BfGraveyard closestGY = null;
             float maxdist = -1;
@@ -618,7 +617,7 @@ namespace Game.BattleFields
             }
 
             if (closestGY != null)
-                return CliDB.WorldSafeLocsStorage.LookupByKey(closestGY.GetGraveyardId());
+                return Global.ObjectMgr.GetWorldSafeLoc(closestGY.GetGraveyardId());
 
             return null;
         }
@@ -689,7 +688,7 @@ namespace Game.BattleFields
 
             // Set creature in world
             map.AddToMap(creature);
-            creature.setActive(true);
+            creature.SetActive(true);
 
             return creature;
         }
@@ -718,7 +717,7 @@ namespace Game.BattleFields
 
             // Add to world
             map.AddToMap(go);
-            go.setActive(true);
+            go.SetActive(true);
 
             return go;
         }
@@ -892,8 +891,8 @@ namespace Game.BattleFields
 
         public float GetDistance(Player player)
         {
-            WorldSafeLocsRecord safeLoc = CliDB.WorldSafeLocsStorage.LookupByKey(m_GraveyardId);
-            return player.GetDistance2d(safeLoc.Loc.X, safeLoc.Loc.Y);
+            WorldSafeLocsEntry safeLoc = Global.ObjectMgr.GetWorldSafeLoc(m_GraveyardId);
+            return player.GetDistance2d(safeLoc.Loc.GetPositionX(), safeLoc.Loc.GetPositionY());
         }
 
         public void AddPlayer(ObjectGuid playerGuid)
@@ -965,7 +964,7 @@ namespace Game.BattleFields
 
         void RelocateDeadPlayers()
         {
-            WorldSafeLocsRecord closestGrave = null;
+            WorldSafeLocsEntry closestGrave = null;
             foreach (var guid in m_ResurrectQueue)
             {
                 Player player = Global.ObjAccessor.FindPlayer(guid);
@@ -973,12 +972,12 @@ namespace Game.BattleFields
                     continue;
 
                 if (closestGrave != null)
-                    player.TeleportTo(player.GetMapId(), closestGrave.Loc.X, closestGrave.Loc.Y, closestGrave.Loc.Z, player.GetOrientation());
+                    player.TeleportTo(closestGrave.Loc);
                 else
                 {
                     closestGrave = m_Bf.GetClosestGraveYard(player);
                     if (closestGrave != null)
-                        player.TeleportTo(player.GetMapId(), closestGrave.Loc.X, closestGrave.Loc.Y, closestGrave.Loc.Z, player.GetOrientation());
+                        player.TeleportTo(closestGrave.Loc);
                 }
             }
         }

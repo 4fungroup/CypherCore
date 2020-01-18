@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -106,7 +106,7 @@ namespace Game.Spells
                     return;
 
             if (m_caster == unitTarget)                              // prevent interrupt message
-                finish();
+                Finish();
 
             SpellInstakillLog data = new SpellInstakillLog();
             data.Target = unitTarget.GetGUID();
@@ -193,7 +193,7 @@ namespace Game.Spells
                                 case 51963:
                                     {
                                         // about +4 base spell dmg per level
-                                        damage = (int)(m_caster.getLevel() - 60) * 4 + 60;
+                                        damage = (int)(m_caster.GetLevel() - 60) * 4 + 60;
                                         break;
                                     }
                             }
@@ -282,7 +282,7 @@ namespace Game.Spells
                                     hit.effectMask &= ~Convert.ToUInt32(1 << 1);
 
                                 // not empty (checked), copy
-                                var attackers = unitTarget.getAttackers();
+                                var attackers = unitTarget.GetAttackers();
 
                                 // remove invalid attackers
                                 foreach (var att in attackers)
@@ -561,7 +561,7 @@ namespace Game.Spells
                 return;
             }
 
-            finish();
+            Finish();
 
             m_caster.CastSpell(null, spellInfo, false);
         }
@@ -1042,7 +1042,7 @@ namespace Game.Spells
             }
         }
 
-        public void DoCreateItem(uint i, uint itemtype, byte context = 0, List<uint> bonusListIds = null)
+        public void DoCreateItem(uint i, uint itemtype, ItemContext context = 0, List<uint> bonusListIds = null)
         {
             if (unitTarget == null || !unitTarget.IsTypeId(TypeId.Player))
                 return;
@@ -1055,26 +1055,6 @@ namespace Game.Spells
             {
                 player.SendEquipError(InventoryResult.ItemNotFound);
                 return;
-            }
-
-            // bg reward have some special in code work
-            BattlegroundTypeId bgType = 0;
-            switch ((BattlegroundMarks)m_spellInfo.Id)
-            {
-                case BattlegroundMarks.SpellAvMarkWinner:
-                case BattlegroundMarks.SpellAvMarkLoser:
-                    bgType = BattlegroundTypeId.AV;
-                    break;
-                case BattlegroundMarks.SpellWsMarkWinner:
-                case BattlegroundMarks.SpellWsMarkLoser:
-                    bgType = BattlegroundTypeId.WS;
-                    break;
-                case BattlegroundMarks.SpellAbMarkWinner:
-                case BattlegroundMarks.SpellAbMarkLoser:
-                    bgType = BattlegroundTypeId.AB;
-                    break;
-                default:
-                    break;
             }
 
             uint num_to_add = (uint)damage;
@@ -1146,7 +1126,7 @@ namespace Game.Spells
                     pItem.SetCreator(player.GetGUID());
 
                 // send info to the client
-                player.SendNewItem(pItem, num_to_add, true, bgType == 0);
+                player.SendNewItem(pItem, num_to_add, true, true);
 
                 if (pItem.GetQuality() > ItemQuality.Epic || (pItem.GetQuality() == ItemQuality.Epic && pItem.GetItemLevel(player) >= GuildConst.MinNewsItemLevel))
                 {
@@ -1156,8 +1136,7 @@ namespace Game.Spells
                 }
 
                 // we succeeded in creating at least one item, so a levelup is possible
-                if (bgType == 0)
-                    player.UpdateCraftSkill(m_spellInfo.Id);
+                player.UpdateCraftSkill(m_spellInfo.Id);
             }
         }
 
@@ -1167,7 +1146,7 @@ namespace Game.Spells
             if (effectHandleMode != SpellEffectHandleMode.HitTarget)
                 return;
 
-            DoCreateItem(effIndex, effectInfo.ItemType);
+            DoCreateItem(effIndex, effectInfo.ItemType, m_spellInfo.HasAttribute(SpellAttr0.Tradespell) ? ItemContext.TradeSkill : ItemContext.None);
             ExecuteLogEffectCreateItem(effIndex, effectInfo.ItemType);
         }
 
@@ -1183,9 +1162,10 @@ namespace Game.Spells
             Player player = unitTarget.ToPlayer();
 
             uint item_id = effectInfo.ItemType;
+            ItemContext context = m_spellInfo.HasAttribute(SpellAttr0.Tradespell) ? ItemContext.TradeSkill : ItemContext.None;
 
             if (item_id != 0)
-                DoCreateItem(effIndex, item_id);
+                DoCreateItem(effIndex, item_id, context);
 
             // special case: fake item replaced by generate using spell_loot_template
             if (m_spellInfo.IsLootCrafting())
@@ -1200,10 +1180,10 @@ namespace Game.Spells
                     player.DestroyItemCount(item_id, count, true);
 
                     // create some random items
-                    player.AutoStoreLoot(m_spellInfo.Id, LootStorage.Spell);
+                    player.AutoStoreLoot(m_spellInfo.Id, LootStorage.Spell, context);
                 }
                 else
-                    player.AutoStoreLoot(m_spellInfo.Id, LootStorage.Spell);    // create some random items
+                    player.AutoStoreLoot(m_spellInfo.Id, LootStorage.Spell, context);    // create some random items
 
                 player.UpdateCraftSkill(m_spellInfo.Id);
             }
@@ -1221,7 +1201,7 @@ namespace Game.Spells
             Player player = unitTarget.ToPlayer();
 
             // create some random items
-            player.AutoStoreLoot(m_spellInfo.Id, LootStorage.Spell);
+            player.AutoStoreLoot(m_spellInfo.Id, LootStorage.Spell, m_spellInfo.HasAttribute(SpellAttr0.Tradespell) ? ItemContext.TradeSkill : ItemContext.None);
             // @todo ExecuteLogEffectCreateItem(i, GetEffect(i].ItemType);
         }
 
@@ -1243,7 +1223,7 @@ namespace Game.Spells
                 if (!dynObj.CreateDynamicObject(caster.GetMap().GenerateLowGuid(HighGuid.DynamicObject), caster, m_spellInfo, destTarget, radius, DynamicObjectType.AreaSpell, m_SpellVisual))
                     return;
 
-                Aura aura = Aura.TryCreate(m_spellInfo, m_castId, SpellConst.MaxEffectMask, dynObj, caster, m_spellValue.EffectBasePoints, null, ObjectGuid.Empty, ObjectGuid.Empty, m_castItemLevel);
+                Aura aura = Aura.TryCreate(m_spellInfo, m_castId, SpellConst.MaxEffectMask, dynObj, caster, m_spellValue.EffectBasePoints, null, ObjectGuid.Empty, ObjectGuid.Empty, m_castItemEntry, m_castItemLevel);
                 if (aura != null)
                 {
                     m_spellAura = aura;
@@ -1281,11 +1261,11 @@ namespace Game.Spells
             {
                 case 24571:                                         // Blood Fury
                                                                     // Instantly increases your rage by ${(300-10*$max(0,$PL-60))/10}.
-                    damage -= 10 * (int)Math.Max(0, Math.Min(30, m_caster.getLevel() - 60));
+                    damage -= 10 * (int)Math.Max(0, Math.Min(30, m_caster.GetLevel() - 60));
                     break;
                 case 24532:                                         // Burst of Energy
                                                                     // Instantly increases your energy by ${60-4*$max(0,$min(15,$PL-60))}.
-                    damage -= 4 * (int)Math.Max(0, Math.Min(15, m_caster.getLevel() - 60));
+                    damage -= 4 * (int)Math.Max(0, Math.Min(15, m_caster.GetLevel() - 60));
                     break;
                 case 67490:                                         // Runic Mana Injector (mana gain increased by 25% for engineers - 3.2.0 patch change)
                     {
@@ -1334,7 +1314,7 @@ namespace Game.Spells
             if (gameObjTarget != null)
             {
                 // Players shouldn't be able to loot gameobjects that are currently despawned
-                if (!gameObjTarget.isSpawned() && !player.IsGameMaster())
+                if (!gameObjTarget.IsSpawned() && !player.IsGameMaster())
                 {
                     Log.outError(LogFilter.Spells, "Possible hacking attempt: Player {0} [{1}] tried to loot a gameobject [{2}] which is on respawn time without being in GM mode!",
                                     player.GetName(), player.GetGUID().ToString(), gameObjTarget.GetGUID().ToString());
@@ -1350,7 +1330,7 @@ namespace Game.Spells
                 if (Global.ScriptMgr.OnGossipHello(player, gameObjTarget))
                     return;
 
-                if (gameObjTarget.GetAI().GossipHello(player, true))
+                if (gameObjTarget.GetAI().GossipHello(player, false))
                     return;
 
                 switch (gameObjTarget.GetGoType())
@@ -1532,7 +1512,7 @@ namespace Game.Spells
 
             ushort pos = m_CastItem.GetPos();
 
-            Item pNewItem = Item.CreateItem(newitemid, 1, player);
+            Item pNewItem = Item.CreateItem(newitemid, 1, m_CastItem.GetContext(), player);
             if (pNewItem == null)
                 return;
 
@@ -2133,7 +2113,8 @@ namespace Game.Spells
                 player.DestroyItemCount(itemTarget, ref count, true);
                 unitTarget = player;
                 // and add a scroll
-                DoCreateItem(effIndex, effectInfo.ItemType);
+                damage = 1;
+                DoCreateItem(effIndex, effectInfo.ItemType, m_spellInfo.HasAttribute(SpellAttr0.Tradespell) ? ItemContext.TradeSkill : ItemContext.None);
                 itemTarget = null;
                 m_targets.SetItemTarget(null);
             }
@@ -2336,7 +2317,7 @@ namespace Game.Spells
                 return;
 
             // cast finish successfully
-            finish();
+            Finish();
 
             Pet pet = m_caster.CreateTamedPetFrom(creatureTarget, m_spellInfo.Id);
             if (pet == null)                                               // in very specific state like near world end/etc.
@@ -2408,14 +2389,14 @@ namespace Game.Spells
 
                     OldSummon.NearTeleportTo(px, py, pz, OldSummon.GetOrientation());
 
-                    if (owner.IsTypeId(TypeId.Player) && OldSummon.isControlled())
+                    if (owner.IsTypeId(TypeId.Player) && OldSummon.IsControlled())
                         owner.ToPlayer().PetSpellInitialize();
 
                     return;
                 }
 
                 if (owner.IsTypeId(TypeId.Player))
-                    owner.ToPlayer().RemovePet(OldSummon, (OldSummon.getPetType() == PetType.Hunter ? PetSaveMode.AsDeleted : PetSaveMode.NotInSlot), false);
+                    owner.ToPlayer().RemovePet(OldSummon, (OldSummon.GetPetType() == PetType.Hunter ? PetSaveMode.AsDeleted : PetSaveMode.NotInSlot), false);
                 else
                     return;
             }
@@ -2466,7 +2447,7 @@ namespace Game.Spells
             if (learn_spellproto == null)
                 return;
 
-            pet.learnSpell(learn_spellproto.Id);
+            pet.LearnSpell(learn_spellproto.Id);
             pet.SavePetToDB(PetSaveMode.AsCurrent);
             pet.GetOwner().PetSpellInitialize();
         }
@@ -2489,18 +2470,18 @@ namespace Game.Spells
                 return;
             }
 
-            if (!unitTarget.GetThreatManager().getOnlineContainer().empty())
+            if (!unitTarget.GetThreatManager().GetOnlineContainer().Empty())
             {
                 // Also use this effect to set the taunter's threat to the taunted creature's highest value
-                float myThreat = unitTarget.GetThreatManager().getThreat(m_caster);
-                float topThreat = unitTarget.GetThreatManager().getOnlineContainer().getMostHated().getThreat();
+                float myThreat = unitTarget.GetThreatManager().GetThreat(m_caster);
+                float topThreat = unitTarget.GetThreatManager().GetOnlineContainer().GetMostHated().GetThreat();
                 if (topThreat > myThreat)
-                    unitTarget.GetThreatManager().addThreat(m_caster, topThreat - myThreat);
+                    unitTarget.GetThreatManager().AddThreat(m_caster, topThreat - myThreat);
 
                 //Set aggro victim to caster
-                HostileReference forcedVictim = unitTarget.GetThreatManager().getOnlineContainer().getReferenceByTarget(m_caster);
+                HostileReference forcedVictim = unitTarget.GetThreatManager().GetOnlineContainer().GetReferenceByTarget(m_caster);
                 if (forcedVictim != null)
-                    unitTarget.GetThreatManager().setCurrentVictim(forcedVictim);
+                    unitTarget.GetThreatManager().SetCurrentVictim(forcedVictim);
             }
 
             if (unitTarget.ToCreature().IsAIEnabled && !unitTarget.ToCreature().HasReactState(ReactStates.Passive))
@@ -2774,8 +2755,8 @@ namespace Game.Spells
                 {
                     SpellInfo curSpellInfo = spell.m_spellInfo;
                     // check if we can interrupt spell
-                    if ((spell.getState() == SpellState.Casting
-                        || (spell.getState() == SpellState.Preparing && spell.GetCastTime() > 0.0f))
+                    if ((spell.GetState() == SpellState.Casting
+                        || (spell.GetState() == SpellState.Preparing && spell.GetCastTime() > 0.0f))
                         && (curSpellInfo.PreventionType.HasAnyFlag(SpellPreventionType.Silence))
                         && ((i == CurrentSpellTypes.Generic && curSpellInfo.InterruptFlags.HasAnyFlag(SpellInterruptFlags.Interrupt))
                         || (i == CurrentSpellTypes.Channeled && curSpellInfo.HasChannelInterruptFlag(SpellChannelInterruptFlags.Interrupt))))
@@ -3391,16 +3372,16 @@ namespace Game.Spells
             if (unitTarget == null)
                 return;
 
-            unitTarget.getHostileRefManager().UpdateVisibility();
+            unitTarget.GetHostileRefManager().UpdateVisibility();
 
-            var attackers = unitTarget.getAttackers();
+            var attackers = unitTarget.GetAttackers();
             foreach (var unit in attackers)
             {
                 if (!unit.CanSeeOrDetect(unitTarget))
                     unit.AttackStop();
             }
 
-            unitTarget.m_lastSanctuaryTime = Time.GetMSTime();
+            unitTarget.LastSanctuaryTime = GameTime.GetGameTimeMS();
 
             // Vanish allows to remove all threat and cast regular stealth so other spells can be used
             if (m_caster.IsTypeId(TypeId.Player)
@@ -3481,7 +3462,7 @@ namespace Game.Spells
             PhasingHandler.InheritPhaseShift(go, m_caster);
 
             go.SetFaction(m_caster.GetFaction());
-            go.SetLevel(m_caster.getLevel() + 1);
+            go.SetLevel(m_caster.GetLevel() + 1);
             int duration = m_spellInfo.CalcDuration(m_caster);
             go.SetRespawnTime(duration > 0 ? duration / Time.InMilliseconds : 0);
             go.SetSpellId(m_spellInfo.Id);
@@ -3867,10 +3848,10 @@ namespace Game.Spells
             if (!unitTarget || !unitTarget.IsAlive())
                 return;
 
-            if (unitTarget.m_extraAttacks != 0)
+            if (unitTarget.ExtraAttacks != 0)
                 return;
 
-            unitTarget.m_extraAttacks = (uint)damage;
+            unitTarget.ExtraAttacks = (uint)damage;
 
             ExecuteLogEffectExtraAttacks(effIndex, unitTarget, (uint)damage);
         }
@@ -3983,7 +3964,7 @@ namespace Game.Spells
 
             // we should also force pets to remove us from current target
             List<Unit> attackerSet = new List<Unit>();
-            foreach (var unit in m_caster.getAttackers())
+            foreach (var unit in m_caster.GetAttackers())
                 if (unit.GetTypeId() == TypeId.Unit && !unit.CanHaveThreatList())
                     attackerSet.Add(unit);
 
@@ -4086,7 +4067,7 @@ namespace Game.Spells
                 // tied to one of existing expansion fields in creature_template?
 
                 // Double chances for elites
-                m_caster.ToPlayer().UpdateGatherSkill(skill, (uint)damage, (uint)reqValue, (uint)(creature.isElite() ? 2 : 1));
+                m_caster.ToPlayer().UpdateGatherSkill(skill, (uint)damage, (uint)reqValue, (uint)(creature.IsElite() ? 2 : 1));
             }
         }
 
@@ -4114,10 +4095,21 @@ namespace Game.Spells
                 if (m_preGeneratedPath.GetPathType() == PathType.Blank)
                 {
                     Position pos = unitTarget.GetFirstCollisionPosition(unitTarget.GetObjectSize(), unitTarget.GetRelativeAngle(m_caster.GetPosition()));
+                    if (MathFunctions.fuzzyGt(m_spellInfo.Speed, 0.0f) && m_spellInfo.HasAttribute(SpellAttr9.SpecialDelayCalculation))
+                        speed = pos.GetExactDist(m_caster) / speed;
+
                     m_caster.GetMotionMaster().MoveCharge(pos.posX, pos.posY, pos.posZ, speed, EventId.Charge, false, unitTarget, spellEffectExtraData);
                 }
                 else
+                {
+                    if (MathFunctions.fuzzyGt(m_spellInfo.Speed, 0.0f) && m_spellInfo.HasAttribute(SpellAttr9.SpecialDelayCalculation))
+                    {
+                        Vector3 pos = m_preGeneratedPath.GetActualEndPosition();
+                        speed = new Position(pos.X, pos.Y, pos.Z).GetExactDist(m_caster) / speed;
+                    }
+
                     m_caster.GetMotionMaster().MoveCharge(m_preGeneratedPath, speed, unitTarget, spellEffectExtraData);
+                }
             }
 
             if (effectHandleMode == SpellEffectHandleMode.HitTarget)
@@ -4165,7 +4157,7 @@ namespace Game.Spells
 
             Creature creatureTarget = unitTarget.ToCreature();
             if (creatureTarget)
-                if (creatureTarget.isWorldBoss() || creatureTarget.IsDungeonBoss())
+                if (creatureTarget.IsWorldBoss() || creatureTarget.IsDungeonBoss())
                     return;
 
             // Spells with SPELL_EFFECT_KNOCK_BACK (like Thunderstorm) can't knockback target if target has ROOT/STUN
@@ -4179,7 +4171,7 @@ namespace Game.Spells
             float ratio = 0.1f;
             float speedxy = effectInfo.MiscValue * ratio;
             float speedz = damage * ratio;
-            if (speedxy < 0.1f && speedz < 0.1f)
+            if (speedxy < 0.01f && speedz < 0.01f)
                 return;
 
             float x, y;
@@ -4318,7 +4310,7 @@ namespace Game.Spells
                 return;
 
             Group group = player.GetGroup();
-            if (!group || (group.isRaidGroup() && !group.IsLeader(player.GetGUID()) && !group.IsAssistant(player.GetGUID())))
+            if (!group || (group.IsRaidGroup() && !group.IsLeader(player.GetGUID()) && !group.IsAssistant(player.GetGUID())))
                 return;
 
             float x, y, z;
@@ -4390,7 +4382,7 @@ namespace Game.Spells
 
             pet.SetDynamicFlags(UnitDynFlags.HideModel);
             pet.RemoveUnitFlag(UnitFlags.Skinnable);
-            pet.setDeathState(DeathState.Alive);
+            pet.SetDeathState(DeathState.Alive);
             pet.ClearUnitState(UnitState.AllState);
             pet.SetHealth(pet.CountPctFromMaxHealth(damage));
 
@@ -4502,7 +4494,7 @@ namespace Game.Spells
             if (unitTarget == null)
                 return;
 
-            unitTarget.GetThreatManager().modifyThreatPercent(m_caster, damage);
+            unitTarget.GetThreatManager().ModifyThreatPercent(m_caster, damage);
         }
 
         [SpellEffectHandler(SpellEffectName.TransDoor)]
@@ -5050,7 +5042,7 @@ namespace Game.Spells
                 caster = caster.ToTotem().GetOwner();
 
             // in another case summon new
-            uint level = caster.getLevel();
+            uint level = caster.GetLevel();
 
             // level of pet summoned using engineering item based at engineering skill level
             if (m_CastItem != null && caster.IsTypeId(TypeId.Player))
@@ -5117,7 +5109,7 @@ namespace Game.Spells
                 return;
 
             if (unitTarget == null || !unitTarget.IsTypeId(TypeId.Unit) ||
-                !unitTarget.IsPet() || unitTarget.ToPet().getPetType() != PetType.Hunter)
+                !unitTarget.IsPet() || unitTarget.ToPet().GetPetType() != PetType.Hunter)
                 return;
 
             unitTarget.AddPetFlag(UnitPetFlags.CanBeRenamed);
@@ -5507,7 +5499,7 @@ namespace Game.Spells
             List<uint> bonusList = new List<uint>();
             bonusList.Add(collectionMgr.GetHeirloomBonus(m_misc.Data0));
 
-            DoCreateItem(effIndex, m_misc.Data0, 0, bonusList);
+            DoCreateItem(effIndex, m_misc.Data0, ItemContext.None, bonusList);
             ExecuteLogEffectCreateItem(effIndex, m_misc.Data0);
         }
 
@@ -5756,6 +5748,47 @@ namespace Game.Spells
                 return;
 
             unitTarget.ToPlayer().GetSession().GetCollectionMgr().AddTransmogSet((uint)effectInfo.MiscValue);
+        }
+
+        [SpellEffectHandler(SpellEffectName.LearnAzeriteEssencePower)]
+        void EffectLearnAzeriteEssencePower(uint effIndex)
+        {
+            if (effectHandleMode != SpellEffectHandleMode.HitTarget)
+                return;
+
+            Player playerTarget = unitTarget != null ? unitTarget.ToPlayer() : null;
+            if (!playerTarget)
+                return;
+
+            Item heartOfAzeroth = playerTarget.GetItemByEntry(PlayerConst.ItemIdHeartOfAzeroth, ItemSearchLocation.Everywhere);
+            if (heartOfAzeroth == null)
+                return;
+
+            AzeriteItem azeriteItem = heartOfAzeroth.ToAzeriteItem();
+            if (azeriteItem == null)
+                return;
+
+            // remove old rank and apply new one
+            if (azeriteItem.IsEquipped())
+            {
+                SelectedAzeriteEssences selectedEssences = azeriteItem.GetSelectedAzeriteEssences();
+                if (selectedEssences != null)
+                {
+                    for (int slot = 0; slot < SharedConst.MaxAzeriteEssenceSlot; ++slot)
+                    {
+                        if (selectedEssences.AzeriteEssenceID[slot] == effectInfo.MiscValue)
+                        {
+                            bool major = (AzeriteItemMilestoneType)Global.DB2Mgr.GetAzeriteItemMilestonePower(slot).Type == AzeriteItemMilestoneType.MajorEssence;
+                            playerTarget.ApplyAzeriteEssence(azeriteItem, (uint)effectInfo.MiscValue, SharedConst.MaxAzeriteEssenceRank, major, false);
+                            playerTarget.ApplyAzeriteEssence(azeriteItem, (uint)effectInfo.MiscValue, (uint)effectInfo.MiscValueB, major, false);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            azeriteItem.SetEssenceRank((uint)effectInfo.MiscValue, (uint)effectInfo.MiscValueB);
+            azeriteItem.SetState(ItemUpdateState.Changed, playerTarget);
         }
     }
 

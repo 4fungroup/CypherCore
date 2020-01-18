@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,8 +30,8 @@ namespace Game.Entities
         {
             _duration = 0;
 
-            objectTypeMask |= TypeMask.Conversation;
-            objectTypeId = TypeId.Conversation;
+            ObjectTypeMask |= TypeMask.Conversation;
+            ObjectTypeId = TypeId.Conversation;
 
             m_updateFlag.Stationary = true;
             m_updateFlag.Conversation = true;

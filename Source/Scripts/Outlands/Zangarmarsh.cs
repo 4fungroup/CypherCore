@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -267,7 +267,7 @@ namespace Scripts.Outlands
     {
         public npc_kayra_longmane() : base("npc_kayra_longmane") { }
 
-        class npc_kayra_longmaneAI : npc_escortAI
+        class npc_kayra_longmaneAI : NpcEscortAI
         {
             public npc_kayra_longmaneAI(Creature creature) : base(creature) { }
 
@@ -312,7 +312,7 @@ namespace Scripts.Outlands
             {
                 creature.GetAI().Talk(SAY_START, player);
 
-                npc_escortAI pEscortAI = (npc_kayra_longmaneAI)creature.GetAI();
+                NpcEscortAI pEscortAI = (npc_kayra_longmaneAI)creature.GetAI();
                 if (pEscortAI != null)
                     pEscortAI.Start(false, false, player.GetGUID());
             }

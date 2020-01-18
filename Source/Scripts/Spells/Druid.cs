@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -732,7 +732,7 @@ namespace Scripts.Spells.Druid
             if (player.IsInWater()) // Aquatic form
                 triggeredSpellId = SpellIds.FormAquatic;
             else if (player.GetSkillValue(SkillType.Riding) >= 225 && CheckLocationForForm(SpellIds.FormFlight) == SpellCastResult.SpellCastOk) // Flight form
-                triggeredSpellId = player.getLevel() >= 71 ? SpellIds.FormSwiftFlight : SpellIds.FormFlight;
+                triggeredSpellId = player.GetLevel() >= 71 ? SpellIds.FormSwiftFlight : SpellIds.FormFlight;
             else // Stag form (riding skill already checked in CheckCast)
                 triggeredSpellId = SpellIds.FormStag;
 

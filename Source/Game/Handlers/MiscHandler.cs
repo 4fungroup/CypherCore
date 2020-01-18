@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -190,7 +190,7 @@ namespace Game
                 return;
             }
 
-            if (player.isDebugAreaTriggers)
+            if (player.IsDebugAreaTriggers)
                 player.SendSysMessage(packet.Entered ? CypherStrings.DebugAreatriggerEntered : CypherStrings.DebugAreatriggerLeft, packet.AreaTriggerID);
 
             if (Global.ScriptMgr.OnAreaTrigger(player, atEntry, packet.Entered))
@@ -328,13 +328,13 @@ namespace Game
 
                 Group group = player.GetGroup();
                 if (group)
-                    if (group.isLFGGroup() && player.GetMap().IsDungeon())
+                    if (group.IsLFGGroup() && player.GetMap().IsDungeon())
                         teleported = player.TeleportToBGEntryPoint();
             }
 
             if (!teleported)
             {
-                WorldSafeLocsRecord entranceLocation = null;
+                WorldSafeLocsEntry entranceLocation = null;
                 InstanceSave instanceSave = player.GetInstanceSave(at.target_mapId);
                 if (instanceSave != null)
                 {
@@ -347,17 +347,17 @@ namespace Game
                         {
                             InstanceScript instanceScript = instanceMap.GetInstanceScript();
                             if (instanceScript != null)
-                                entranceLocation = CliDB.WorldSafeLocsStorage.LookupByKey(instanceScript.GetEntranceLocation());
+                                entranceLocation = Global.ObjectMgr.GetWorldSafeLoc(instanceScript.GetEntranceLocation());
                         }
                     }
 
                     // Finally check with the instancesave for an entrance location if we did not get a valid one from the instancescript
                     if (entranceLocation == null)
-                        entranceLocation = CliDB.WorldSafeLocsStorage.LookupByKey(instanceSave.GetEntranceLocation());
+                        entranceLocation = Global.ObjectMgr.GetWorldSafeLoc(instanceSave.GetEntranceLocation());
                 }
 
                 if (entranceLocation != null)
-                    player.TeleportTo(entranceLocation.MapID, entranceLocation.Loc.X, entranceLocation.Loc.Y, entranceLocation.Loc.Z, (float)(entranceLocation.Facing * Math.PI / 180), TeleportToOptions.NotLeaveTransport);
+                    player.TeleportTo(entranceLocation.Loc, TeleportToOptions.NotLeaveTransport);
                 else
                     player.TeleportTo(at.target_mapId, at.target_X, at.target_Y, at.target_Z, at.target_Orientation, TeleportToOptions.NotLeaveTransport);
             }
@@ -582,7 +582,7 @@ namespace Game
             {
                 if (group.IsLeader(GetPlayer().GetGUID()))
                 {
-                    for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.next())
+                    for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.Next())
                     {
                         Player groupGuy = refe.GetSource();
                         if (!groupGuy)
@@ -662,7 +662,7 @@ namespace Game
             {
                 if (group.IsLeader(GetPlayer().GetGUID()))
                 {
-                    for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.next())
+                    for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.Next())
                     {
                         Player groupGuy = refe.GetSource();
                         if (!groupGuy)

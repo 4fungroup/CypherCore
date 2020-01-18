@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -526,13 +526,13 @@ namespace Scripts.Northrend.Ulduar.FlameLeviathan
         //! I also removed the spellInfo check
         void DoBatteringRamIfReady()
         {
-            if (me.isAttackReady())
+            if (me.IsAttackReady())
             {
                 Unit target = Global.ObjAccessor.GetUnit(me, _pursueTarget);
                 if (me.IsWithinCombatRange(target, 30.0f))
                 {
                     DoCast(target, Spells.BatteringRam);
-                    me.resetAttackTimer();
+                    me.ResetAttackTimer();
                 }
             }
         }
@@ -867,7 +867,7 @@ namespace Scripts.Northrend.Ulduar.FlameLeviathan
     }
 
     [Script]
-    class npc_mimirons_inferno : npc_escortAI
+    class npc_mimirons_inferno : NpcEscortAI
     {
         public npc_mimirons_inferno(Creature creature)
             : base(creature)
@@ -893,7 +893,7 @@ namespace Scripts.Northrend.Ulduar.FlameLeviathan
         {
             base.UpdateAI(diff);
 
-            if (!HasEscortState(eEscortState.Escorting))
+            if (!HasEscortState(EscortState.Escorting))
                 Start(false, true, ObjectGuid.Empty, null, false, true);
             else
             {
@@ -1034,7 +1034,7 @@ namespace Scripts.Northrend.Ulduar.FlameLeviathan
             }
         }
 
-        public override void sGossipSelect(Player player, uint menuId, uint gossipListId)
+        public override void GossipSelect(Player player, uint menuId, uint gossipListId)
         {
             if (menuId == GossipIds.MenuLoreKeeper && gossipListId == GossipIds.OptionLoreKeeper)
             {

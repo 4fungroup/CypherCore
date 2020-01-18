@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -195,7 +195,7 @@ namespace Game.Network.Packets
         {
             public void Write(WorldPacket data)
             {
-                data.WriteUInt32(ID);
+                data.WriteUInt32(Id);
                 data.WriteUInt32(NextPageID);
                 data.WriteInt32(PlayerConditionID);
                 data.WriteUInt8(Flags);
@@ -205,7 +205,7 @@ namespace Game.Network.Packets
                 data.WriteString(Text);
             }
 
-            public uint ID;
+            public uint Id;
             public uint NextPageID;
             public int PlayerConditionID;
             public byte Flags;
@@ -409,7 +409,7 @@ namespace Game.Network.Packets
         }
 
         public int MissingQuestCount;
-        public uint[] MissingQuestPOIs = new uint[100];
+        public uint[] MissingQuestPOIs = new uint[125];
     }
 
     public class QuestPOIQueryResponse : ServerPacket
@@ -421,36 +421,14 @@ namespace Game.Network.Packets
             _worldPacket.WriteInt32(QuestPOIDataStats.Count);
             _worldPacket.WriteInt32(QuestPOIDataStats.Count);
 
+            bool useCache = WorldConfig.GetBoolValue(WorldCfg.CacheDataQueries);
+
             foreach (QuestPOIData questPOIData in QuestPOIDataStats)
             {
-                _worldPacket.WriteUInt32(questPOIData.QuestID);
-
-                _worldPacket.WriteInt32(questPOIData.QuestPOIBlobDataStats.Count);
-
-                foreach (QuestPOIBlobData questPOIBlobData in questPOIData.QuestPOIBlobDataStats)
-                {
-                    _worldPacket.WriteInt32(questPOIBlobData.BlobIndex);
-                    _worldPacket.WriteInt32(questPOIBlobData.ObjectiveIndex);
-                    _worldPacket.WriteInt32(questPOIBlobData.QuestObjectiveID);
-                    _worldPacket.WriteInt32(questPOIBlobData.QuestObjectID);
-                    _worldPacket.WriteInt32(questPOIBlobData.MapID);
-                    _worldPacket.WriteInt32(questPOIBlobData.UiMapID);
-                    _worldPacket.WriteInt32(questPOIBlobData.Priority);
-                    _worldPacket.WriteInt32(questPOIBlobData.Flags);
-                    _worldPacket.WriteInt32(questPOIBlobData.WorldEffectID);
-                    _worldPacket.WriteInt32(questPOIBlobData.PlayerConditionID);
-                    _worldPacket.WriteInt32(questPOIBlobData.SpawnTrackingID);
-                    _worldPacket.WriteInt32(questPOIBlobData.QuestPOIBlobPointStats.Count);
-
-                    foreach (QuestPOIBlobPoint questPOIBlobPoint in questPOIBlobData.QuestPOIBlobPointStats)
-                    {
-                        _worldPacket.WriteInt32(questPOIBlobPoint.X);
-                        _worldPacket.WriteInt32(questPOIBlobPoint.Y);
-                    }
-
-                    _worldPacket.WriteBit(questPOIBlobData.AlwaysAllowMergingBlobs);
-                    _worldPacket.FlushBits();
-                }
+                if (useCache)
+                    _worldPacket.WriteBytes(questPOIData.QueryDataBuffer);
+                else
+                    questPOIData.Write(_worldPacket);
             }
         }
 
@@ -639,7 +617,7 @@ namespace Game.Network.Packets
                 RaceID = player.GetRace();
                 Sex = (Gender)(byte)player.m_playerData.NativeSex;
                 ClassID = player.GetClass();
-                Level = (byte)player.getLevel();
+                Level = (byte)player.GetLevel();
 
                 DeclinedName names = player.GetDeclinedNames();
                 if (names != null)
@@ -753,7 +731,6 @@ namespace Game.Network.Packets
 
     public struct DBQueryRecord
     {
-        public ObjectGuid GUID;
         public uint RecordID;
     }
 
@@ -769,41 +746,6 @@ namespace Game.Network.Packets
         public float Size;
         public List<uint> QuestItems = new List<uint>();
         public uint RequiredLevel;
-    }
-
-    public struct QuestPOIBlobPoint
-    {
-        public QuestPOIBlobPoint(int x, int y)
-        {
-            X = x;
-            Y = y;
-        }
-
-        public int X;
-        public int Y;
-    }
-
-    public class QuestPOIBlobData
-    {
-        public int BlobIndex;
-        public int ObjectiveIndex;
-        public int QuestObjectiveID;
-        public int QuestObjectID;
-        public int MapID;
-        public int UiMapID;
-        public int Priority;
-        public int Flags;
-        public int WorldEffectID;
-        public int PlayerConditionID;
-        public int SpawnTrackingID;
-        public List<QuestPOIBlobPoint> QuestPOIBlobPointStats = new List<QuestPOIBlobPoint>();
-        public bool AlwaysAllowMergingBlobs;
-    }
-
-    public class QuestPOIData
-    {
-        public uint QuestID;
-        public List<QuestPOIBlobData> QuestPOIBlobDataStats = new List<QuestPOIBlobData>();
     }
 
     class QuestCompletionNPC

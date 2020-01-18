@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -79,7 +79,7 @@ namespace Game
         public void SendBfEntered(ulong queueId, bool relocated, bool onOffense)
         {
             BFMgrEntering bfMgrEntering = new BFMgrEntering();
-            bfMgrEntering.ClearedAFK = _player.isAFK();
+            bfMgrEntering.ClearedAFK = _player.IsAFK();
             bfMgrEntering.Relocated = relocated;
             bfMgrEntering.OnOffense = onOffense;
             bfMgrEntering.QueueID = queueId;

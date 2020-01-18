@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +18,6 @@
 using Framework.Constants;
 using Game.Entities;
 using System.Collections.Generic;
-using System.Linq;
-using System.Collections.Concurrent;
 
 namespace Game.Maps
 {
@@ -101,7 +99,7 @@ namespace Game.Maps
         {
             map.AddToGrid(obj, new Cell(cellCoord));
             obj.AddToWorld();
-            if (obj.isActiveObject())
+            if (obj.IsActiveObject())
                 map.AddToActive(obj);
 
             ++count;
@@ -167,7 +165,7 @@ namespace Game.Maps
                 creature.RemoveAllDynObjects();
                 creature.RemoveAllAreaTriggers();
 
-                if (creature.IsInCombat() || !creature.GetThreatManager().areThreatListsEmpty())
+                if (creature.IsInCombat() || !creature.GetThreatManager().IsThreatListsEmpty())
                 {
                     creature.CombatStop();
                     creature.DeleteThreatList();

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -252,7 +252,7 @@ namespace Game.DungeonFinding
 
         public void Update(uint diff)
         {
-            if (!isOptionEnabled(LfgOptions.EnableDungeonFinder | LfgOptions.EnableRaidBrowser))
+            if (!IsOptionEnabled(LfgOptions.EnableDungeonFinder | LfgOptions.EnableRaidBrowser))
                 return;
 
             long currTime = Time.UnixTime;
@@ -363,7 +363,7 @@ namespace Game.DungeonFinding
             LfgJoinResultData joinData = new LfgJoinResultData();
             List<ObjectGuid> players = new List<ObjectGuid>();
             uint rDungeonId = 0;
-            bool isContinue = grp && grp.isLFGGroup() && GetState(gguid) != LfgState.FinishedDungeon;
+            bool isContinue = grp && grp.IsLFGGroup() && GetState(gguid) != LfgState.FinishedDungeon;
 
             // Do not allow to change dungeon in the middle of a current dungeon
             if (isContinue)
@@ -400,7 +400,7 @@ namespace Game.DungeonFinding
                 else
                 {
                     byte memberCount = 0;
-                    for (GroupReference refe = grp.GetFirstMember(); refe != null && joinData.result == LfgJoinResult.Ok; refe = refe.next())
+                    for (GroupReference refe = grp.GetFirstMember(); refe != null && joinData.result == LfgJoinResult.Ok; refe = refe.Next())
                     {
                         Player plrg = refe.GetSource();
                         if (plrg)
@@ -524,7 +524,7 @@ namespace Game.DungeonFinding
                 SetState(gguid, LfgState.Rolecheck);
                 // Send update to player
                 LfgUpdateData updateData = new LfgUpdateData(LfgUpdateType.JoinQueue, dungeons);
-                for (GroupReference refe = grp.GetFirstMember(); refe != null; refe = refe.next())
+                for (GroupReference refe = grp.GetFirstMember(); refe != null; refe = refe.Next())
                 {
                     Player plrg = refe.GetSource();
                     if (plrg)
@@ -649,7 +649,7 @@ namespace Game.DungeonFinding
             return null;
         }
 
-        public void UpdateRoleCheck(ObjectGuid gguid, ObjectGuid guid = default(ObjectGuid), LfgRoles roles = LfgRoles.None)
+        public void UpdateRoleCheck(ObjectGuid gguid, ObjectGuid guid = default, LfgRoles roles = LfgRoles.None)
         {
             if (gguid.IsEmpty())
                 return;
@@ -1201,7 +1201,7 @@ namespace Game.DungeonFinding
             LFGDungeonData dungeon = null;
             Group group = player.GetGroup();
 
-            if (group && group.isLFGGroup())
+            if (group && group.IsLFGGroup())
                 dungeon = GetLFGDungeon(GetDungeon(group.GetGUID()));
 
             if (dungeon == null)
@@ -1244,7 +1244,7 @@ namespace Game.DungeonFinding
                 if (!fromOpcode)
                 {
                     // Select a player inside to be teleported to
-                    for (GroupReference refe = group.GetFirstMember(); refe != null && mapid == 0; refe = refe.next())
+                    for (GroupReference refe = group.GetFirstMember(); refe != null && mapid == 0; refe = refe.Next())
                     {
                         Player plrg = refe.GetSource();
                         if (plrg && plrg != player && plrg.GetMapId() == dungeon.map)
@@ -1342,7 +1342,7 @@ namespace Game.DungeonFinding
                 if (dungeon.difficulty == Difficulty.Heroic)
                     player.UpdateCriteria(CriteriaTypes.UseLfdToGroupWithPlayers, 1);
 
-                LfgReward reward = GetRandomDungeonReward(rDungeonId, player.getLevel());
+                LfgReward reward = GetRandomDungeonReward(rDungeonId, player.GetLevel());
                 if (reward == null)
                     continue;
 
@@ -1486,6 +1486,22 @@ namespace Game.DungeonFinding
             return PlayersStore[guid].GetSelectedDungeons();
         }
 
+        public uint GetSelectedRandomDungeon(ObjectGuid guid)
+        {
+            if (GetState(guid) != LfgState.None)
+            {
+                var dungeons = GetSelectedDungeons(guid);
+                if (!dungeons.Empty())
+                {
+                    LFGDungeonData dungeon = GetLFGDungeon(dungeons.First());
+                    if (dungeon != null && dungeon.type == LfgType.Raid)
+                        return dungeons.First();
+                }
+            }
+
+            return 0;
+        }
+
         public Dictionary<uint, LfgLockInfoData> GetLockedDungeons(ObjectGuid guid)
         {
             Dictionary<uint, LfgLockInfoData> lockDic = new Dictionary<uint, LfgLockInfoData>();
@@ -1496,7 +1512,7 @@ namespace Game.DungeonFinding
                 return lockDic;
             }
 
-            uint level = player.getLevel();
+            uint level = player.GetLevel();
             Expansion expansion = player.GetSession().GetExpansion();
             var dungeons = GetDungeonsByRandom(0);
             bool denyJoin = !player.GetSession().HasPermission(RBACPermissions.JoinDungeonFinder);
@@ -1688,6 +1704,9 @@ namespace Game.DungeonFinding
 
         public void AddPlayerToGroup(ObjectGuid gguid, ObjectGuid guid)
         {
+            if (!GroupsStore.ContainsKey(gguid))
+                GroupsStore[gguid] = new LFGGroupData();
+
             GroupsStore[gguid].AddPlayer(guid);
         }
 
@@ -1695,6 +1714,7 @@ namespace Game.DungeonFinding
         {
             if (!GroupsStore.ContainsKey(gguid))
                 GroupsStore[gguid] = new LFGGroupData();
+
             GroupsStore[gguid].SetLeader(leader);
         }
 
@@ -1851,7 +1871,7 @@ namespace Game.DungeonFinding
             QueuesStore.Clear();
         }
 
-        public bool isOptionEnabled(LfgOptions option)
+        public bool IsOptionEnabled(LfgOptions option)
         {
             return m_options.HasAnyFlag(option);
         }
@@ -1920,7 +1940,7 @@ namespace Game.DungeonFinding
             AddPlayerToGroup(gguid, guid);
         }
 
-        public bool selectedRandomLfgDungeon(ObjectGuid guid)
+        public bool SelectedRandomLfgDungeon(ObjectGuid guid)
         {
             if (GetState(guid) != LfgState.None)
             {
@@ -1936,7 +1956,7 @@ namespace Game.DungeonFinding
             return false;
         }
 
-        public bool inLfgDungeonMap(ObjectGuid guid, uint map, Difficulty difficulty)
+        public bool InLfgDungeonMap(ObjectGuid guid, uint map, Difficulty difficulty)
         {
             if (!guid.IsParty())
                 guid = GetGroup(guid);

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -164,7 +164,7 @@ namespace Game
                 GetPlayer().PrepareGossipMenu(unit, unit.GetCreatureTemplate().GossipMenuId, true);
                 GetPlayer().SendPreparedGossip(unit);
             }
-            unit.GetAI().sGossipHello(GetPlayer());
+            unit.GetAI().GossipHello(GetPlayer());
         }
 
         [WorldPacketHandler(ClientOpcodes.GossipSelectOption)]
@@ -222,7 +222,7 @@ namespace Game
             {
                 if (unit)
                 {
-                    unit.GetAI().sGossipSelectCode(GetPlayer(), packet.GossipID, packet.GossipIndex, packet.PromotionCode);
+                    unit.GetAI().GossipSelectCode(GetPlayer(), packet.GossipID, packet.GossipIndex, packet.PromotionCode);
                     if (!Global.ScriptMgr.OnGossipSelectCode(GetPlayer(), unit, GetPlayer().PlayerTalkClass.GetGossipOptionSender(packet.GossipIndex), GetPlayer().PlayerTalkClass.GetGossipOptionAction(packet.GossipIndex), packet.PromotionCode))
                         GetPlayer().OnGossipSelect(unit, packet.GossipIndex, packet.GossipID);
                 }
@@ -236,7 +236,7 @@ namespace Game
             {
                 if (unit != null)
                 {
-                    unit.GetAI().sGossipSelect(GetPlayer(), packet.GossipID, packet.GossipIndex);
+                    unit.GetAI().GossipSelect(GetPlayer(), packet.GossipID, packet.GossipIndex);
                     if (!Global.ScriptMgr.OnGossipSelect(GetPlayer(), unit, GetPlayer().PlayerTalkClass.GetGossipOptionSender(packet.GossipIndex), GetPlayer().PlayerTalkClass.GetGossipOptionAction(packet.GossipIndex)))
                         GetPlayer().OnGossipSelect(unit, packet.GossipIndex, packet.GossipID);
                 }
@@ -273,7 +273,7 @@ namespace Game
             GetPlayer().DurabilityLossAll(0.25f, true);
 
             // get corpse nearest graveyard
-            WorldSafeLocsRecord corpseGrave = null;
+            WorldSafeLocsEntry corpseGrave = null;
             WorldLocation corpseLocation = GetPlayer().GetCorpseLocation();
             if (GetPlayer().HasCorpse())
             {
@@ -286,10 +286,10 @@ namespace Game
             // teleport to nearest from corpse graveyard, if different from nearest to player ghost
             if (corpseGrave != null)
             {
-                WorldSafeLocsRecord ghostGrave = Global.ObjectMgr.GetClosestGraveYard(GetPlayer(), GetPlayer().GetTeam(), GetPlayer());
+                WorldSafeLocsEntry ghostGrave = Global.ObjectMgr.GetClosestGraveYard(GetPlayer(), GetPlayer().GetTeam(), GetPlayer());
 
                 if (corpseGrave != ghostGrave)
-                    GetPlayer().TeleportTo(corpseGrave.MapID, corpseGrave.Loc.X, corpseGrave.Loc.Y, corpseGrave.Loc.Z, GetPlayer().GetOrientation());
+                    GetPlayer().TeleportTo(corpseGrave.Loc);
             }
         }
 
@@ -366,14 +366,14 @@ namespace Game
 
             uint petSlot = 0;
             // not let move dead pet in slot
-            if (pet && pet.IsAlive() && pet.getPetType() == PetType.Hunter)
+            if (pet && pet.IsAlive() && pet.GetPetType() == PetType.Hunter)
             {
                 PetStableInfo stableEntry;// = new PetStableInfo();
                 stableEntry.PetSlot = petSlot;
                 stableEntry.PetNumber = pet.GetCharmInfo().GetPetNumber();
                 stableEntry.CreatureID = pet.GetEntry();
                 stableEntry.DisplayID = pet.GetDisplayId();
-                stableEntry.ExperienceLevel = pet.getLevel();
+                stableEntry.ExperienceLevel = pet.GetLevel();
                 stableEntry.PetFlags = PetStableinfo.Active;
                 stableEntry.PetName = pet.GetName();
                 ++petSlot;
@@ -498,7 +498,7 @@ namespace Game
                     int leftInStock = vendorItem.maxcount == 0 ? -1 : (int)vendor.GetVendorItemCurrentCount(vendorItem);
                     if (!GetPlayer().IsGameMaster())
                     {
-                        if (!Convert.ToBoolean(itemTemplate.GetAllowableClass() & GetPlayer().getClassMask()) && itemTemplate.GetBonding() == ItemBondingType.OnAcquire)
+                        if (!Convert.ToBoolean(itemTemplate.GetAllowableClass() & GetPlayer().GetClassMask()) && itemTemplate.GetBonding() == ItemBondingType.OnAcquire)
                             continue;
 
                         if ((itemTemplate.GetFlags2().HasAnyFlag(ItemFlags2.FactionHorde) && GetPlayer().GetTeam() == Team.Alliance) ||

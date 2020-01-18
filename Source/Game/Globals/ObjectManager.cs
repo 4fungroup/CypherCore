@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Framework.Dynamic;
+using Framework.IO;
 
 namespace Game
 {
@@ -687,7 +688,7 @@ namespace Game
                 uint id = result.Read<uint>(0);
 
                 PointOfInterest POI = new PointOfInterest();
-                POI.ID = id;
+                POI.Id = id;
                 POI.Pos = new Vector2(result.Read<float>(1), result.Read<float>(2));
                 POI.Icon = result.Read<uint>(3);
                 POI.Flags = result.Read<uint>(4);
@@ -745,7 +746,7 @@ namespace Game
                 uint zoneId = result.Read<uint>(1);
                 Team team = (Team)result.Read<uint>(2);
 
-                WorldSafeLocsRecord entry = CliDB.WorldSafeLocsStorage.LookupByKey(safeLocId);
+                WorldSafeLocsEntry entry = GetWorldSafeLoc(safeLocId);
                 if (entry == null)
                 {
                     Log.outError(LogFilter.Sql, "Table `graveyard_zone` has a record for not existing graveyard (WorldSafeLocs.dbc id) {0}, skipped.", safeLocId);
@@ -771,16 +772,46 @@ namespace Game
 
             Log.outInfo(LogFilter.ServerLoading, "Loaded {0} graveyard-zone links in {1} ms", count, Time.GetMSTimeDiffToNow(oldMSTime));
         }
+        public void LoadWorldSafeLocs()
+        {
+            uint oldMSTime = Time.GetMSTime();
 
-        WorldSafeLocsRecord GetDefaultGraveYard(Team team)
+            //                                         0   1      2     3     4     5
+            SQLResult result = DB.World.Query("SELECT ID, MapID, LocX, LocY, LocZ, Facing FROM world_safe_locs");
+            if (result.IsEmpty())
+            {
+                Log.outInfo(LogFilter.ServerLoading, "Loaded 0 world locations. DB table `world_safe_locs` is empty.");
+                return;
+            }
+            do
+            {
+                uint id = result.Read<uint>(0);
+                WorldLocation loc = new WorldLocation(result.Read<uint>(1), result.Read<float>(2), result.Read<float>(3), result.Read<float>(4), result.Read<float>(5));
+                if (!GridDefines.IsValidMapCoord(loc))
+                {
+                    Log.outError(LogFilter.Sql, $"World location (ID: {id}) has a invalid position MapID: {loc.GetMapId()} {loc.ToString()}, skipped");
+                    continue;
+                }
+
+                WorldSafeLocsEntry worldSafeLocs = new WorldSafeLocsEntry();
+                worldSafeLocs.Id = id;
+                worldSafeLocs.Loc = loc;
+                _worldSafeLocs[id] = worldSafeLocs;
+
+            } while (result.NextRow());
+
+            Log.outInfo(LogFilter.ServerLoading, $"Loaded {_worldSafeLocs.Count} world locations {Time.GetMSTimeDiffToNow(oldMSTime)} ms");
+        }
+
+        WorldSafeLocsEntry GetDefaultGraveYard(Team team)
         {
             if (team == Team.Horde)
-                return CliDB.WorldSafeLocsStorage.LookupByKey(10);
+                return GetWorldSafeLoc(10);
             else if (team == Team.Alliance)
-                return CliDB.WorldSafeLocsStorage.LookupByKey(4);
+                return GetWorldSafeLoc(4);
             else return null;
         }
-        public WorldSafeLocsRecord GetClosestGraveYard(WorldLocation location, Team team, WorldObject conditionObject)
+        public WorldSafeLocsEntry GetClosestGraveYard(WorldLocation location, Team team, WorldObject conditionObject)
         {
             float x, y, z;
             location.GetPosition(out x, out y, out z);
@@ -820,19 +851,19 @@ namespace Game
             // at corpse map
             bool foundNear = false;
             float distNear = 10000;
-            WorldSafeLocsRecord entryNear = null;
+            WorldSafeLocsEntry entryNear = null;
 
             // at entrance map for corpse map
             bool foundEntr = false;
             float distEntr = 10000;
-            WorldSafeLocsRecord entryEntr = null;
+            WorldSafeLocsEntry entryEntr = null;
 
             // some where other
-            WorldSafeLocsRecord entryFar = null;
+            WorldSafeLocsEntry entryFar = null;
 
             foreach (var data in range)
             {
-                WorldSafeLocsRecord entry = CliDB.WorldSafeLocsStorage.LookupByKey(data.safeLocId);
+                WorldSafeLocsEntry entry = GetWorldSafeLoc(data.safeLocId);
                 if (entry == null)
                 {
                     Log.outError(LogFilter.Sql, "Table `game_graveyard_zone` has record for not existing graveyard (WorldSafeLocs.dbc id) {0}, skipped.", data.safeLocId);
@@ -849,17 +880,17 @@ namespace Game
                     if (!Global.ConditionMgr.IsObjectMeetingNotGroupedConditions(ConditionSourceType.Graveyard, data.safeLocId, conditionSource))
                         continue;
 
-                    if (entry.MapID == mapEntry.ParentMapID && !conditionObject.GetPhaseShift().HasVisibleMapId(entry.MapID))
+                    if (entry.Loc.GetMapId() == mapEntry.ParentMapID && !conditionObject.GetPhaseShift().HasVisibleMapId(entry.Loc.GetMapId()))
                         continue;
                 }
 
                 // find now nearest graveyard at other map
-                if (MapId != entry.MapID && entry.MapID != mapEntry.ParentMapID)
+                if (MapId != entry.Loc.GetMapId() && entry.Loc.GetMapId() != mapEntry.ParentMapID)
                 {
                     // if find graveyard at different map from where entrance placed (or no entrance data), use any first
                     if (mapEntry == null
                         || mapEntry.CorpseMapID < 0
-                        || mapEntry.CorpseMapID != entry.MapID
+                        || mapEntry.CorpseMapID != entry.Loc.GetMapId()
                         || (mapEntry.Corpse.X == 0 && mapEntry.Corpse.Y == 0))
                     {
                         // not have any corrdinates for check distance anyway
@@ -868,8 +899,8 @@ namespace Game
                     }
 
                     // at entrance map calculate distance (2D);
-                    float dist2 = (entry.Loc.X - mapEntry.Corpse.X) * (entry.Loc.X - mapEntry.Corpse.X)
-                        + (entry.Loc.Y - mapEntry.Corpse.Y) * (entry.Loc.Y - mapEntry.Corpse.Y);
+                    float dist2 = (entry.Loc.GetPositionX() - mapEntry.Corpse.X) * (entry.Loc.GetPositionX() - mapEntry.Corpse.X)
+                        + (entry.Loc.GetPositionY() - mapEntry.Corpse.Y) * (entry.Loc.GetPositionY() - mapEntry.Corpse.Y);
                     if (foundEntr)
                     {
                         if (dist2 < distEntr)
@@ -888,7 +919,7 @@ namespace Game
                 // find now nearest graveyard at same map
                 else
                 {
-                    float dist2 = (entry.Loc.X - x) * (entry.Loc.X - x) + (entry.Loc.Y - y) * (entry.Loc.Y - y) + (entry.Loc.Z - z) * (entry.Loc.Z - z);
+                    float dist2 = (entry.Loc.GetPositionX() - x) * (entry.Loc.GetPositionX() - x) + (entry.Loc.GetPositionY() - y) * (entry.Loc.GetPositionY() - y) + (entry.Loc.GetPositionZ() - z) * (entry.Loc.GetPositionZ() - z);
                     if (foundNear)
                     {
                         if (dist2 < distNear)
@@ -923,6 +954,14 @@ namespace Game
                     return data;
             }
             return null;
+        }
+        public WorldSafeLocsEntry GetWorldSafeLoc(uint id)
+        {
+            return _worldSafeLocs.LookupByKey(id);
+        }
+        public Dictionary<uint, WorldSafeLocsEntry> GetWorldSafeLocs()
+        {
+            return _worldSafeLocs;
         }
 
         public bool AddGraveYardLink(uint id, uint zoneId, Team team, bool persist = true)
@@ -1422,7 +1461,7 @@ namespace Game
 
             List<uint> evt_scripts = new List<uint>();
             // Load all possible script entries from gameobjects
-            foreach (var go in gameObjectTemplateStorage)
+            foreach (var go in _gameObjectTemplateStorage)
             {
                 uint eventId = go.Value.GetEventScriptId();
                 if (eventId != 0)
@@ -1720,10 +1759,10 @@ namespace Game
             LoadCreatureTemplateModels();
 
             // Checking needs to be done after loading because of the difficulty self referencing
-            foreach (var template in creatureTemplateStorage.Values)
+            foreach (var template in _creatureTemplateStorage.Values)
                 CheckCreatureTemplate(template);
 
-            Log.outInfo(LogFilter.ServerLoading, "Loaded {0} creature definitions in {1} ms", creatureTemplateStorage.Count, Time.GetMSTimeDiffToNow(time));
+            Log.outInfo(LogFilter.ServerLoading, "Loaded {0} creature definitions in {1} ms", _creatureTemplateStorage.Count, Time.GetMSTimeDiffToNow(time));
         }
         public void LoadCreatureTemplate(SQLFields fields)
         {
@@ -1804,7 +1843,7 @@ namespace Game
             creature.FlagsExtra = (CreatureFlagsExtra)fields.Read<uint>(76);
             creature.ScriptID = GetScriptId(fields.Read<string>(77));
 
-            creatureTemplateStorage.Add(entry, creature);
+            _creatureTemplateStorage.Add(entry, creature);
         }
 
         void LoadCreatureTemplateModels()
@@ -2095,7 +2134,7 @@ namespace Game
                 uint item = result.Read<uint>(1);
                 uint idx = result.Read<uint>(2);
 
-                if (!creatureTemplateStorage.ContainsKey(entry))
+                if (!_creatureTemplateStorage.ContainsKey(entry))
                 {
                     Log.outError(LogFilter.Sql, "Table `creature_questitem` has data for nonexistent creature (entry: {0}, idx: {1}), skipped", entry, idx);
                     continue;
@@ -2246,7 +2285,7 @@ namespace Game
                 ++count;
             } while (result.NextRow());
 
-            foreach (var creatureTemplate in creatureTemplateStorage.Values)
+            foreach (var creatureTemplate in _creatureTemplateStorage.Values)
             {
                 for (short lvl = creatureTemplate.Minlevel; lvl <= creatureTemplate.Maxlevel; ++lvl)
                 {
@@ -2339,7 +2378,7 @@ namespace Game
             {
                 uint entry = result.Read<uint>(0);
 
-                var template = creatureTemplateStorage.LookupByKey(entry);
+                var template = _creatureTemplateStorage.LookupByKey(entry);
                 if (template == null)
                 {
                     Log.outError(LogFilter.Sql, $"Creature template (Entry: {entry}) does not exist but has a record in `creature_template_scaling`");
@@ -3465,7 +3504,7 @@ namespace Game
         }
         public CreatureTemplate GetCreatureTemplate(uint entry)
         {
-            return creatureTemplateStorage.LookupByKey(entry);
+            return _creatureTemplateStorage.LookupByKey(entry);
         }
         public CreatureAddon GetCreatureTemplateAddon(uint entry)
         {
@@ -3477,7 +3516,7 @@ namespace Game
         }
         public Dictionary<uint, CreatureTemplate> GetCreatureTemplates()
         {
-            return creatureTemplateStorage;
+            return _creatureTemplateStorage;
         }
         public CreatureData GetCreatureData(ulong guid)
         {
@@ -3617,17 +3656,14 @@ namespace Game
 
                 unsafe
                 {
-                    fixed (int* b = go.Raw.data)
-                    {
-                        for (byte x = 0; x < db2go.PropValue.Length; ++x)
-                            b[x] = db2go.PropValue[x];
-                    }
+                    for (byte x = 0; x < db2go.PropValue.Length; ++x)
+                        go.Raw.data[x] = db2go.PropValue[x];
                 }
 
                 go.RequiredLevel = 0;
                 go.ScriptId = 0;
 
-                gameObjectTemplateStorage[db2go.Id] = go;
+                _gameObjectTemplateStorage[db2go.Id] = go;
             }
 
             //                                          0      1     2          3     4         5               6     7
@@ -3663,11 +3699,8 @@ namespace Game
 
                     unsafe
                     {
-                        fixed (int* b = got.Raw.data)
-                        {
-                            for (byte x = 0; x < SharedConst.MaxGOData; ++x)
-                                b[x] = result.Read<int>(8 + x);
-                        }
+                        for (byte x = 0; x < SharedConst.MaxGOData; ++x)
+                            got.Raw.data[x] = result.Read<int>(8 + x);
                     }
 
                     got.RequiredLevel = result.Read<int>(42);
@@ -3796,7 +3829,7 @@ namespace Game
                             break;
                     }
 
-                    gameObjectTemplateStorage[entry] = got;
+                    _gameObjectTemplateStorage[entry] = got;
                     ++count;
                 }
                 while (result.NextRow());
@@ -4184,7 +4217,7 @@ namespace Game
                 uint item = result.Read<uint>(1);
                 uint idx = result.Read<uint>(2);
 
-                if (!gameObjectTemplateStorage.ContainsKey(entry))
+                if (!_gameObjectTemplateStorage.ContainsKey(entry))
                 {
                     Log.outError(LogFilter.Sql, "Table `gameobject_questitem` has data for nonexistent gameobject (entry: {0}, idx: {1}), skipped", entry, idx);
                     continue;
@@ -4362,7 +4395,7 @@ namespace Game
         }
         public GameObjectTemplate GetGameObjectTemplate(uint entry)
         {
-            return gameObjectTemplateStorage.LookupByKey(entry);
+            return _gameObjectTemplateStorage.LookupByKey(entry);
         }
         public GameObjectTemplateAddon GetGameObjectTemplateAddon(uint entry)
         {
@@ -4370,7 +4403,7 @@ namespace Game
         }
         public Dictionary<uint, GameObjectTemplate> GetGameObjectTemplates()
         {
-            return gameObjectTemplateStorage;
+            return _gameObjectTemplateStorage;
         }
         public bool IsGameObjectForQuests(uint entry)
         {
@@ -4984,7 +5017,7 @@ namespace Game
                 uint Trigger_ID = result.Read<uint>(0);
                 uint PortLocID = result.Read<uint>(1);
 
-                WorldSafeLocsRecord portLoc = CliDB.WorldSafeLocsStorage.LookupByKey(PortLocID);
+                WorldSafeLocsEntry portLoc = GetWorldSafeLoc(PortLocID);
                 if (portLoc == null)
                 {
                     Log.outError(LogFilter.Sql, "Area Trigger (ID: {0}) has a non-existing Port Loc (ID: {1}) in WorldSafeLocs.dbc, skipped", Trigger_ID, PortLocID);
@@ -4992,11 +5025,11 @@ namespace Game
                 }
 
                 AreaTriggerStruct at = new AreaTriggerStruct();
-                at.target_mapId = portLoc.MapID;
-                at.target_X = portLoc.Loc.X;
-                at.target_Y = portLoc.Loc.Y;
-                at.target_Z = portLoc.Loc.Z;
-                at.target_Orientation = (portLoc.Facing * MathFunctions.PI) / 180; // Orientation is initially in degrees
+                at.target_mapId = portLoc.Loc.GetMapId();
+                at.target_X = portLoc.Loc.GetPositionX();
+                at.target_Y = portLoc.Loc.GetPositionY();
+                at.target_Z = portLoc.Loc.GetPositionZ();
+                at.target_Orientation = portLoc.Loc.GetOrientation();
                 at.PortLocId = portLoc.Id;
 
                 AreaTriggerRecord atEntry = CliDB.AreaTriggerStorage.LookupByKey(Trigger_ID);
@@ -6251,9 +6284,9 @@ namespace Game
                 "RewardFactionID5, RewardFactionValue5, RewardFactionOverride5, RewardFactionCapIn5, RewardFactionFlags, " +
                 //96                97                  98                 99                  100                101                 102                103
                 "RewardCurrencyID1, RewardCurrencyQty1, RewardCurrencyID2, RewardCurrencyQty2, RewardCurrencyID3, RewardCurrencyQty3, RewardCurrencyID4, RewardCurrencyQty4, " +
-                //104                105                 106          107          108             109               110        111
-                "AcceptedSoundKitID, CompleteSoundKitID, AreaGroupID, TimeAllowed, AllowableRaces, TreasurePickerID, Expansion, ManagedWorldStateID, " +
-                //112      113             114               115              116                117                118                 119                 120
+                //104                105                 106          107          108             109               110        111                  112
+                "AcceptedSoundKitID, CompleteSoundKitID, AreaGroupID, TimeAllowed, AllowableRaces, TreasurePickerID, Expansion, ManagedWorldStateID, QuestSessionBonus, " +
+                //113      114             115               116              117                118                119                 120                 121
                 "LogTitle, LogDescription, QuestDescription, AreaDescription, PortraitGiverText, PortraitGiverName, PortraitTurnInText, PortraitTurnInName, QuestCompletionLog" +
                 " FROM quest_template");
 
@@ -6663,7 +6696,7 @@ namespace Game
                 foreach (QuestObjective obj in qinfo.Objectives)
                 {
                     // Store objective for lookup by id
-                    _questObjectives[obj.ID] = obj;
+                    _questObjectives[obj.Id] = obj;
 
                     // Check storage index for objectives which store data
                     if (obj.StorageIndex < 0)
@@ -6678,7 +6711,7 @@ namespace Game
                             case QuestObjectiveType.AreaTrigger:
                             case QuestObjectiveType.WinPetBattleAgainstNpc:
                             case QuestObjectiveType.ObtainCurrency:
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has invalid StorageIndex = {2} for objective type {3}", qinfo.Id, obj.ID, obj.StorageIndex, obj.Type);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has invalid StorageIndex = {2} for objective type {3}", qinfo.Id, obj.Id, obj.StorageIndex, obj.Type);
                                 break;
                             default:
                                 break;
@@ -6690,17 +6723,17 @@ namespace Game
                         case QuestObjectiveType.Item:
                             qinfo.SetSpecialFlag(QuestSpecialFlags.Deliver);
                             if (GetItemTemplate((uint)obj.ObjectID) == null)
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing item entry {2}, quest can't be done.", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing item entry {2}, quest can't be done.", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.Monster:
                             qinfo.SetSpecialFlag(QuestSpecialFlags.Kill | QuestSpecialFlags.Cast);
                             if (GetCreatureTemplate((uint)obj.ObjectID) == null)
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing creature entry {2}, quest can't be done.", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing creature entry {2}, quest can't be done.", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.GameObject:
                             qinfo.SetSpecialFlag(QuestSpecialFlags.Kill | QuestSpecialFlags.Cast);
                             if (GetGameObjectTemplate((uint)obj.ObjectID) == null)
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing gameobject entry {2}, quest can't be done.", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing gameobject entry {2}, quest can't be done.", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.TalkTo:
                             // Need checks (is it creature only?)
@@ -6709,46 +6742,46 @@ namespace Game
                         case QuestObjectiveType.MinReputation:
                         case QuestObjectiveType.MaxReputation:
                             if (!CliDB.FactionStorage.ContainsKey((uint)obj.ObjectID))
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing faction id {2}", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing faction id {2}", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.PlayerKills:
                             qinfo.SetSpecialFlag(QuestSpecialFlags.Kill);
                             if (obj.Amount <= 0)
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has invalid player kills count {2}", qinfo.Id, obj.ID, obj.Amount);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has invalid player kills count {2}", qinfo.Id, obj.Id, obj.Amount);
                             break;
                         case QuestObjectiveType.Currency:
                         case QuestObjectiveType.HaveCurrency:
                         case QuestObjectiveType.ObtainCurrency:
                             if (!CliDB.CurrencyTypesStorage.ContainsKey((uint)obj.ObjectID))
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing currency {2}", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing currency {2}", qinfo.Id, obj.Id, obj.ObjectID);
                             if (obj.Amount <= 0)
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has invalid currency amount {2}", qinfo.Id, obj.ID, obj.Amount);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has invalid currency amount {2}", qinfo.Id, obj.Id, obj.Amount);
                             break;
                         case QuestObjectiveType.LearnSpell:
                             if (!Global.SpellMgr.HasSpellInfo((uint)obj.ObjectID))
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing spell id {2}", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing spell id {2}", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.WinPetBattleAgainstNpc:
                             if (obj.ObjectID != 0 && Global.ObjectMgr.GetCreatureTemplate((uint)obj.ObjectID) == null)
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing creature entry {2}, quest can't be done.", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing creature entry {2}, quest can't be done.", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.DefeatBattlePet:
                             if (!CliDB.BattlePetSpeciesStorage.ContainsKey((uint)obj.ObjectID))
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing battlepet species id {2}", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing battlepet species id {2}", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.CriteriaTree:
                             if (!CliDB.CriteriaTreeStorage.ContainsKey((uint)obj.ObjectID))
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing criteria tree id {2}", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing criteria tree id {2}", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.AreaTrigger:
                             if (!CliDB.AreaTriggerStorage.ContainsKey((uint)obj.ObjectID) && obj.ObjectID != -1)
-                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing areatrigger id {2}", qinfo.Id, obj.ID, obj.ObjectID);
+                                Log.outError(LogFilter.Sql, "Quest {0} objective {1} has non existing areatrigger id {2}", qinfo.Id, obj.Id, obj.ObjectID);
                             break;
                         case QuestObjectiveType.Money:
                         case QuestObjectiveType.WinPvpPetBattles:
                             break;
                         default:
-                            Log.outError(LogFilter.Sql, "Quest {0} objective {1} has unhandled type {2}", qinfo.Id, obj.ID, obj.Type);
+                            Log.outError(LogFilter.Sql, "Quest {0} objective {1} has unhandled type {2}", qinfo.Id, obj.Id, obj.Type);
                             break;
                     }
                 }
@@ -7185,7 +7218,7 @@ namespace Game
 
             //                                         0        1    2  3 
             SQLResult points = DB.World.Query("SELECT QuestID, Idx1, X, Y FROM quest_poi_points ORDER BY QuestID DESC, Idx1, Idx2");
-            Dictionary<uint, MultiMap<int, QuestPOIPoint>> POIs = new Dictionary<uint, MultiMap<int, QuestPOIPoint>>();
+            Dictionary<uint, MultiMap<int, QuestPOIBlobPoint>> POIs = new Dictionary<uint, MultiMap<int, QuestPOIBlobPoint>>();
 
             if (!points.IsEmpty())
             {
@@ -7197,9 +7230,9 @@ namespace Game
                     int y = points.Read<int>(3);
 
                     if (!POIs.ContainsKey(questId))
-                        POIs[questId] = new MultiMap<int, QuestPOIPoint>();
+                        POIs[questId] = new MultiMap<int, QuestPOIBlobPoint>();
 
-                    QuestPOIPoint point = new QuestPOIPoint(x, y);
+                    QuestPOIBlobPoint point = new QuestPOIBlobPoint(x, y);
                     POIs[questId].Add(Idx1, point);
                 } while (points.NextRow());
             }
@@ -7224,14 +7257,17 @@ namespace Game
                 if (Global.ObjectMgr.GetQuestTemplate(questID) == null)
                     Log.outError(LogFilter.Sql, "`quest_poi` quest id ({0}) Idx1 ({1}) does not exist in `quest_template`", questID, idx1);
 
-                QuestPOI POI = new QuestPOI(blobIndex, objectiveIndex, questObjectiveID, questObjectID, mapID, uiMapId, priority, flags, worldEffectID, playerConditionID, spawnTrackingID, alwaysAllowMergingBlobs);
                 if (!POIs.ContainsKey(questID) || !POIs[questID].ContainsKey(idx1))
                 {
                     Log.outError(LogFilter.Sql, "Table quest_poi references unknown quest points for quest {0} POI id {1}", questID, blobIndex);
                     continue;
                 }
-                POI.points = POIs[questID][idx1];
-                _questPOIStorage.Add(questID, POI);
+
+                if (!_questPOIStorage.ContainsKey(questID))
+                    _questPOIStorage[questID] = new QuestPOIData(questID);
+
+                QuestPOIData poiData = _questPOIStorage[questID];
+                poiData.QuestPOIBlobDataStats.Add(new QuestPOIBlobData(blobIndex, objectiveIndex, questObjectiveID, questObjectID, mapID, uiMapId, priority, flags, worldEffectID, playerConditionID, spawnTrackingID, POIs[questID][idx1], alwaysAllowMergingBlobs));
 
                 ++count;
             } while (result.NextRow());
@@ -7395,7 +7431,7 @@ namespace Game
         {
             return _creatureQuestInvolvedRelationsReverse.LookupByKey(questId);
         }
-        public List<QuestPOI> GetQuestPOIList(uint questId)
+        public QuestPOIData GetQuestPOIData(uint questId)
         {
             return _questPOIStorage.LookupByKey(questId);
         }
@@ -8707,9 +8743,9 @@ namespace Game
                         // mail open and then not returned
                         foreach (var itemInfo in m.items)
                         {
-                            stmt = DB.Characters.GetPreparedStatement(CharStatements.DEL_ITEM_INSTANCE);
-                            stmt.AddValue(0, itemInfo.item_guid);
-                            DB.Characters.Execute(stmt);
+                            Item.DeleteFromDB(null, itemInfo.item_guid);
+                            AzeriteItem.DeleteFromDB(null, itemInfo.item_guid);
+                            AzeriteEmpoweredItem.DeleteFromDB(null, itemInfo.item_guid);
                         }
 
                         stmt = DB.Characters.GetPreparedStatement(CharStatements.DEL_MAIL_ITEM_BY_ID);
@@ -9123,6 +9159,32 @@ namespace Game
                 Log.outInfo(LogFilter.ServerLoading, $"Loaded {count} Player Choice Response locale strings in {Time.GetMSTimeDiffToNow(oldMSTime)} ms");
             }
         }
+        public void InitializeQueriesData(QueryDataGroup mask)
+        {
+            // cache disabled
+            if (!WorldConfig.GetBoolValue(WorldCfg.CacheDataQueries))
+                return;
+
+            // Initialize Query data for creatures
+            if (mask.HasAnyFlag(QueryDataGroup.Creatures))
+                foreach (var creaturePair in _creatureTemplateStorage)
+                    creaturePair.Value.InitializeQueryData();
+
+            // Initialize Query Data for gameobjects
+            if (mask.HasAnyFlag(QueryDataGroup.Gameobjects))
+                foreach (var gameobjectPair in _gameObjectTemplateStorage)
+                    gameobjectPair.Value.InitializeQueryData();
+
+            // Initialize Query Data for quests
+            if (mask.HasAnyFlag(QueryDataGroup.Quests))
+                foreach (var questPair in _questTemplates)
+                    questPair.Value.InitializeQueryData();
+
+            // Initialize Quest POI data
+            if (mask.HasAnyFlag(QueryDataGroup.POIs))
+                foreach (var poiPair in _questPOIStorage)
+                    poiPair.Value.InitializeQueryData();
+        }
 
         public MailLevelReward GetMailLevelReward(uint level, ulong raceMask)
         {
@@ -9392,7 +9454,7 @@ namespace Game
             }
 
             cost = dest_i.price;
-            path = dest_i.ID;
+            path = dest_i.Id;
         }
         public uint GetTaxiMountDisplayId(uint id, Team team, bool allowed_alt_team = false)
         {
@@ -9644,7 +9706,7 @@ namespace Game
         MultiMap<uint, uint> _creatureQuestInvolvedRelations = new MultiMap<uint, uint>();
         MultiMap<uint, uint> _creatureQuestInvolvedRelationsReverse = new MultiMap<uint, uint>();
         public MultiMap<int, uint> _exclusiveQuestGroups = new MultiMap<int, uint>();
-        MultiMap<uint, QuestPOI> _questPOIStorage = new MultiMap<uint, QuestPOI>();
+        Dictionary<uint, QuestPOIData> _questPOIStorage = new Dictionary<uint, QuestPOIData>();
         MultiMap<uint, uint> _questAreaTriggerStorage = new MultiMap<uint, uint>();
         Dictionary<uint, QuestObjective> _questObjectives = new Dictionary<uint, QuestObjective>();
         Dictionary<uint, QuestGreeting>[] _questGreetingStorage = new Dictionary<uint, QuestGreeting>[2];
@@ -9680,7 +9742,7 @@ namespace Game
         Dictionary<uint, PointOfInterest> pointsOfInterestStorage = new Dictionary<uint, PointOfInterest>();
 
         //Creature
-        Dictionary<uint, CreatureTemplate> creatureTemplateStorage = new Dictionary<uint, CreatureTemplate>();
+        Dictionary<uint, CreatureTemplate> _creatureTemplateStorage = new Dictionary<uint, CreatureTemplate>();
         Dictionary<uint, CreatureModelInfo> creatureModelStorage = new Dictionary<uint, CreatureModelInfo>();
         Dictionary<ulong, CreatureData> creatureDataStorage = new Dictionary<ulong, CreatureData>();
         Dictionary<ulong, CreatureAddon> creatureAddonStorage = new Dictionary<ulong, CreatureAddon>();
@@ -9697,7 +9759,7 @@ namespace Game
         Dictionary<uint, NpcText> _npcTextStorage = new Dictionary<uint, NpcText>();
 
         //GameObject
-        Dictionary<uint, GameObjectTemplate> gameObjectTemplateStorage = new Dictionary<uint, GameObjectTemplate>();
+        Dictionary<uint, GameObjectTemplate> _gameObjectTemplateStorage = new Dictionary<uint, GameObjectTemplate>();
         Dictionary<ulong, GameObjectData> gameObjectDataStorage = new Dictionary<ulong, GameObjectData>();
         Dictionary<ulong, GameObjectTemplateAddon> _gameObjectTemplateAddonStore = new Dictionary<ulong, GameObjectTemplateAddon>();
         Dictionary<ulong, GameObjectAddon> _gameObjectAddonStorage = new Dictionary<ulong, GameObjectAddon>();
@@ -9743,6 +9805,7 @@ namespace Game
         Dictionary<uint, AreaTriggerStruct> _areaTriggerStorage = new Dictionary<uint, AreaTriggerStruct>();
         Dictionary<ulong, AccessRequirement> _accessRequirementStorage = new Dictionary<ulong, AccessRequirement>();
         MultiMap<ulong, DungeonEncounter> _dungeonEncounterStorage = new MultiMap<ulong, DungeonEncounter>();
+        Dictionary<uint, WorldSafeLocsEntry> _worldSafeLocs = new Dictionary<uint, WorldSafeLocsEntry>();
 
         Dictionary<HighGuid, ObjectGuidGenerator> _guidGenerators = new Dictionary<HighGuid, ObjectGuidGenerator>();
         // first free id for selected id type
@@ -10120,16 +10183,22 @@ namespace Game
         }
     }
 
+    public class WorldSafeLocsEntry
+    {
+        public uint Id;
+        public WorldLocation Loc;
+    }
+
     public class GraveYardData
     {
         public uint safeLocId;
         public uint team;
     }
 
-    public class QuestPOI
+    public class QuestPOIBlobData
     {
-        public QuestPOI(int blobIndex, int objectiveIndex, int questObjectiveID, int questObjectID, int mapID, int uiMapID, int priority, int flags, 
-            int worldEffectID, int playerConditionID, int spawnTrackingID, bool alwaysAllowMergingBlobs)
+        public QuestPOIBlobData(int blobIndex, int objectiveIndex, int questObjectiveID, int questObjectID, int mapID, int uiMapID, int priority, int flags, 
+            int worldEffectID, int playerConditionID, int spawnTrackingID, List<QuestPOIBlobPoint> questPOIBlobPointStats, bool alwaysAllowMergingBlobs)
         {
             BlobIndex = blobIndex;
             ObjectiveIndex = objectiveIndex;
@@ -10142,6 +10211,7 @@ namespace Game
             WorldEffectID = worldEffectID;
             PlayerConditionID = playerConditionID;
             SpawnTrackingID = spawnTrackingID;
+            QuestPOIBlobPointStats = questPOIBlobPointStats;
             AlwaysAllowMergingBlobs = alwaysAllowMergingBlobs;
         }
 
@@ -10156,13 +10226,13 @@ namespace Game
         public int WorldEffectID;
         public int PlayerConditionID;
         public int SpawnTrackingID;
-        public List<QuestPOIPoint> points = new List<QuestPOIPoint>();
+        public List<QuestPOIBlobPoint> QuestPOIBlobPointStats;
         public bool AlwaysAllowMergingBlobs;
     }
 
-    public class QuestPOIPoint
+    public class QuestPOIBlobPoint
     {
-        public QuestPOIPoint(int _x, int _y)
+        public QuestPOIBlobPoint(int _x, int _y)
         {
             X = _x;
             Y = _y;
@@ -10170,6 +10240,54 @@ namespace Game
 
         public int X;
         public int Y;
+    }
+
+    public class QuestPOIData
+    {
+        public uint QuestID;
+        public List<QuestPOIBlobData> QuestPOIBlobDataStats = new List<QuestPOIBlobData>();
+        public ByteBuffer QueryDataBuffer = new ByteBuffer();
+
+        public QuestPOIData(uint questId)
+        {
+            QuestID = questId;
+        }
+
+        public void InitializeQueryData()
+        {
+            Write(QueryDataBuffer);
+        }
+
+        public void Write(ByteBuffer data)
+        {
+            data.WriteUInt32(QuestID);
+            data.WriteInt32(QuestPOIBlobDataStats.Count);
+
+            foreach (QuestPOIBlobData questPOIBlobData in QuestPOIBlobDataStats)
+            {
+                data.WriteInt32(questPOIBlobData.BlobIndex);
+                data.WriteInt32(questPOIBlobData.ObjectiveIndex);
+                data.WriteInt32(questPOIBlobData.QuestObjectiveID);
+                data.WriteInt32(questPOIBlobData.QuestObjectID);
+                data.WriteInt32(questPOIBlobData.MapID);
+                data.WriteInt32(questPOIBlobData.UiMapID);
+                data.WriteInt32(questPOIBlobData.Priority);
+                data.WriteInt32(questPOIBlobData.Flags);
+                data.WriteInt32(questPOIBlobData.WorldEffectID);
+                data.WriteInt32(questPOIBlobData.PlayerConditionID);
+                data.WriteInt32(questPOIBlobData.SpawnTrackingID);
+                data.WriteInt32(questPOIBlobData.QuestPOIBlobPointStats.Count);
+
+                foreach (QuestPOIBlobPoint questPOIBlobPoint in questPOIBlobData.QuestPOIBlobPointStats)
+                {
+                    data.WriteInt32(questPOIBlobPoint.X);
+                    data.WriteInt32(questPOIBlobPoint.Y);
+                }
+
+                data.WriteBit(questPOIBlobData.AlwaysAllowMergingBlobs);
+                data.FlushBits();
+            }
+        }
     }
 
     public class AreaTriggerStruct

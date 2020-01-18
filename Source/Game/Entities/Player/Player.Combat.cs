@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ namespace Game.Entities
             Group group = GetGroup();
             if (group)
             {
-                for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.next())
+                for (GroupReference refe = group.GetFirstMember(); refe != null; refe = refe.Next())
                 {
                     Player player = refe.GetSource();
                     if (!player)
@@ -94,7 +94,7 @@ namespace Game.Entities
 
         float GetRatingMultiplier(CombatRating cr)
         {
-            GtCombatRatingsRecord Rating = CliDB.CombatRatingsGameTable.GetRow(getLevel());
+            GtCombatRatingsRecord Rating = CliDB.CombatRatingsGameTable.GetRow(GetLevel());
             if (Rating == null)
                 return 1.0f;
 

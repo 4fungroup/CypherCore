@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +75,9 @@ namespace Framework.Constants
         SiegeableMulti = 53,
         SiegeableMo = 54,
         PvpReward = 55,
-        Max = 56
+        FuturePatch1 = 56,
+        FuturePatch2 = 57,
+        Max = 58
     }
 
     public enum GameObjectState

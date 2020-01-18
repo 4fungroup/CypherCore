@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@ namespace Game.Entities
     {
         public void InitTalentForLevel()
         {
-            uint level = getLevel();
+            uint level = GetLevel();
             // talents base at level diff (talents = level - 9 but some can be used already)
             if (level < PlayerConst.MinSpecializationLevel)
                 ResetTalentSpecialization();
@@ -422,6 +422,30 @@ namespace Game.Entities
             activeGlyphs.IsFullUpdate = true;
             SendPacket(activeGlyphs);
 
+            Item item = GetItemByEntry(PlayerConst.ItemIdHeartOfAzeroth, ItemSearchLocation.Everywhere);
+            if (item != null)
+            {
+                AzeriteItem azeriteItem = item.ToAzeriteItem();
+                if (azeriteItem != null)
+                {
+                    if (azeriteItem.IsEquipped())
+                    {
+                        ApplyAllAzeriteEmpoweredItemMods(false);
+                        ApplyAzeritePowers(azeriteItem, false);
+                    }
+
+                    azeriteItem.SetSelectedAzeriteEssences(spec.Id);
+
+                    if (azeriteItem.IsEquipped())
+                    {
+                        ApplyAzeritePowers(azeriteItem, true);
+                        ApplyAllAzeriteEmpoweredItemMods(true);
+                    }
+
+                    azeriteItem.SetState(ItemUpdateState.Changed, this);
+                }
+            }
+
             var shapeshiftAuras = GetAuraEffectsByType(AuraType.ModShapeshift);
             foreach (AuraEffect aurEff in shapeshiftAuras)
             {
@@ -446,7 +470,7 @@ namespace Game.Entities
                 return 10 * MoneyConstants.Gold;
             else
             {
-                ulong months = (ulong)(Global.WorldMgr.GetGameTime() - GetTalentResetTime()) / Time.Month;
+                ulong months = (ulong)(GameTime.GetGameTime() - GetTalentResetTime()) / Time.Month;
                 if (months > 0)
                 {
                     // This cost will be reduced by a rate of 5 gold per month

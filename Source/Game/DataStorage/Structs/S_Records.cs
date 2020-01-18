@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -166,6 +166,13 @@ namespace Game.DataStorage
         public byte DisplayOrder;
     }
 
+    public sealed class SpecSetMemberRecord
+    {
+        public uint Id;
+        public uint ChrSpecializationID;
+        public uint SpecSetID;
+    }
+
     public sealed class SpellAuraOptionsRecord
     {
         public uint Id;
@@ -269,12 +276,12 @@ namespace Game.DataStorage
     public sealed class SpellEffectRecord
     {
         public uint Id;
+        public short EffectAura;
         public uint DifficultyID;
         public uint EffectIndex;
         public uint Effect;
         public float EffectAmplitude;
         public int EffectAttributes;
-        public short EffectAura;
         public uint EffectAuraPeriod;
         public float EffectBonusCoefficient;
         public float EffectChainAmplitude;
@@ -382,6 +389,7 @@ namespace Game.DataStorage
     public sealed class SpellMiscRecord
     {
         public uint Id;
+        public int[] Attributes = new int[14];
         public byte DifficultyID;
         public ushort CastingTimeIndex;
         public ushort DurationIndex;
@@ -393,7 +401,6 @@ namespace Game.DataStorage
         public uint SpellIconFileDataID;
         public uint ActiveIconFileDataID;
         public uint ContentTuningID;
-        public int[] Attributes = new int[14];
         public uint SpellID;
     }
 
@@ -525,6 +532,16 @@ namespace Game.DataStorage
         public uint SpellID;
         public ushort[] RequiredTotemCategoryID = new ushort[SpellConst.MaxTotems];
         public uint[] Totem = new uint[SpellConst.MaxTotems];
+    }
+
+    public sealed class SpellVisualKitRecord
+    {
+        public uint Id;
+        public int Flags;
+        public sbyte FallbackPriority;
+        public uint FallbackSpellVisualKitId;
+        public ushort DelayMin;
+        public ushort DelayMax;
     }
 
     public sealed class SpellXSpellVisualRecord

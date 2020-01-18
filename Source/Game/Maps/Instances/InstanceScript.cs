@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -305,7 +305,7 @@ namespace Game.Maps
                         {
                             Creature minion = instance.GetCreature(guid);
                             if (minion)
-                                if (minion.isWorldBoss() && minion.IsAlive())
+                                if (minion.IsWorldBoss() && minion.IsAlive())
                                     return false;
                         }
                     }
@@ -460,9 +460,9 @@ namespace Game.Maps
             {
                 if (go.GetGoType() == GameObjectTypes.Door || go.GetGoType() == GameObjectTypes.Button)
                 {
-                    if (go.getLootState() == LootState.Ready)
+                    if (go.GetLootState() == LootState.Ready)
                         go.UseDoorOrButton(withRestoreTime, useAlternativeState);
-                    else if (go.getLootState() == LootState.Activated)
+                    else if (go.GetLootState() == LootState.Activated)
                         go.ResetDoorOrButton();
                 }
                 else
@@ -482,7 +482,7 @@ namespace Game.Maps
             {
                 if (go.GetGoType() == GameObjectTypes.Door || go.GetGoType() == GameObjectTypes.Button)
                 {
-                    if (go.getLootState() == LootState.Activated)
+                    if (go.GetLootState() == LootState.Activated)
                         go.ResetDoorOrButton();
                 }
                 else
@@ -510,7 +510,7 @@ namespace Game.Maps
                         break;
                 }
 
-                if (go.isSpawned())
+                if (go.IsSpawned())
                     return;
 
                 go.SetRespawnTime((int)timeToDespawn);
@@ -717,7 +717,7 @@ namespace Game.Maps
                 {
                     Group grp = player.GetGroup();
                     if (grp != null)
-                        if (grp.isLFGGroup())
+                        if (grp.IsLFGGroup())
                         {
                             Global.LFGMgr.FinishDungeon(grp.GetGUID(), dungeonId, instance);
                             return;

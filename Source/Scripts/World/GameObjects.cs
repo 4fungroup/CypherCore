@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -223,6 +223,32 @@ namespace Scripts.World
         //Brewfestmusicevents
         public const uint EventBmSelectMusic = 1;
         public const uint EventBmStartMusic = 2;
+
+        //Bells
+        //BellHourlySoundFX
+        public const uint BellTollhorde = 6595; // Horde
+        public const uint BellTolltribal = 6675;
+        public const uint BellTollalliance = 6594; // Alliance
+        public const uint BellTollnightelf = 6674;
+        public const uint BellTolldwarfgnome = 7234;
+        public const uint Belltollkharazhan = 9154; // Kharazhan
+
+        //Bellhourlysoundareas
+        public const uint UndercityArea = 1497;
+        public const uint Ironforge1Area = 809;
+        public const uint Ironforge2Area = 1;
+        public const uint DarnassusArea = 1657;
+        public const uint TeldrassilZone = 141;
+        public const uint KharazhanMapid = 532;
+
+        //Bellhourlyobjects
+        public const uint GoHordeBell = 175885;
+        public const uint GoAllianceBell = 176573;
+        public const uint GoKharazhanBell = 182064;
+
+        //Bellhourlymisc
+        public const uint GameEventHourlyBells = 73;
+        public const uint EventRingBell = 1;
     }
 
     [Script]
@@ -760,9 +786,9 @@ namespace Scripts.World
         {
             public go_soulwellAI(GameObject go) : base(go) { }
 
-            public override bool GossipHello(Player player, bool isUse)
+            public override bool GossipHello(Player player, bool reportUse)
             {
-                if (!isUse)
+                if (!reportUse)
                     return true;
 
                 Unit owner = go.GetOwner();
@@ -1188,6 +1214,77 @@ namespace Scripts.World
         public override GameObjectAI GetAI(GameObject go)
         {
             return new go_pirate_day_musicAI(go);
+        }
+    }
+
+    [Script]
+    class go_bells : GameObjectScript
+    {
+        public go_bells() : base("go_bells") { }
+
+        class go_bellsAI : GameObjectAI
+        {
+            public go_bellsAI(GameObject go) : base(go) { }
+
+            public override void InitializeAI()
+            {
+                switch (go.GetEntry())
+                {
+                    case GameobjectConst.GoHordeBell:
+                        _soundId = go.GetAreaId() == GameobjectConst.UndercityArea ? GameobjectConst.BellTollhorde : GameobjectConst.BellTolltribal;
+                        break;
+                    case GameobjectConst.GoAllianceBell:
+                        {
+                            if (go.GetAreaId() == GameobjectConst.Ironforge1Area || go.GetAreaId() == GameobjectConst.Ironforge2Area)
+                                _soundId = GameobjectConst.BellTolldwarfgnome;
+                            else if (go.GetAreaId() == GameobjectConst.DarnassusArea || go.GetZoneId() == GameobjectConst.TeldrassilZone)
+                                _soundId = GameobjectConst.BellTollnightelf;
+                            else
+                                _soundId = GameobjectConst.BellTollalliance;
+
+                            break;
+                        }
+                    case GameobjectConst.GoKharazhanBell:
+                        _soundId = GameobjectConst.Belltollkharazhan;
+                        break;
+                }
+            }
+
+            public override void OnGameEvent(bool start, ushort eventId)
+            {
+                if (eventId == GameobjectConst.GameEventHourlyBells && start)
+                {
+                    var localTm = Time.UnixTimeToDateTime(GameTime.GetGameTime()).ToLocalTime();
+                    int _rings = (localTm.Hour - 1) % 12 + 1;
+
+                    for (var i = 0; i < _rings; ++i)
+                        _events.ScheduleEvent(GameobjectConst.EventRingBell, TimeSpan.FromSeconds(i * 4 + 1));
+                }
+            }
+
+            public override void UpdateAI(uint diff)
+            {
+                _events.Update(diff);
+
+                _events.ExecuteEvents(eventId =>
+                {
+                    switch (eventId)
+                    {
+                        case GameobjectConst.EventRingBell:
+                            go.PlayDirectSound(_soundId);
+                            break;
+                        default:
+                            break;
+                    }
+                });
+            }
+
+            uint _soundId;
+        }
+
+        public override GameObjectAI GetAI(GameObject go)
+        {
+            return new go_bellsAI(go);
         }
     }
 }

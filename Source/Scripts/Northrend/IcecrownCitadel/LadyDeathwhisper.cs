@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -288,7 +288,7 @@ namespace Scripts.Northrend.IcecrownCitadel
             }
 
             me.SetCombatPulseDelay(5);
-            me.setActive(true);
+            me.SetActive(true);
             DoZoneInCombat();
             _phase = Phases.One;
             _scheduler.CancelGroup(GroupIds.Intro);
@@ -380,7 +380,7 @@ namespace Scripts.Northrend.IcecrownCitadel
                         Group group = owner.GetGroup();
                         if (group)
                         {
-                            for (GroupReference groupRefe = group.GetFirstMember(); groupRefe != null; groupRefe = groupRefe.next())
+                            for (GroupReference groupRefe = group.GetFirstMember(); groupRefe != null; groupRefe = groupRefe.Next())
                             {
                                 Player member = groupRefe.GetSource();
                                 if (member)
@@ -857,7 +857,7 @@ namespace Scripts.Northrend.IcecrownCitadel
                 Group group = owner.GetGroup();
                 if (group)
                 {
-                    for (GroupReference groupRefe = group.GetFirstMember(); groupRefe != null; groupRefe = groupRefe.next())
+                    for (GroupReference groupRefe = group.GetFirstMember(); groupRefe != null; groupRefe = groupRefe.Next())
                     {
                         Player member = groupRefe.GetSource();
                         if (member)

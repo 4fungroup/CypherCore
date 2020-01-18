@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -738,6 +738,22 @@ namespace Game.Scripting
 
             return RunScriptRet<ItemScript>(p => p.OnExpire(player, proto), proto.ScriptId);
         }
+        public bool OnItemRemove(Player player, Item item)
+        {
+            Cypher.Assert(player != null);
+            Cypher.Assert(item != null);
+
+            return RunScriptRet<ItemScript>(tmpscript => tmpscript.OnRemove(player, item), item.GetScriptId());
+        }
+        public bool OnCastItemCombatSpell(Player player, Unit victim, SpellInfo spellInfo, Item item)
+        {
+            Cypher.Assert(player != null);
+            Cypher.Assert(victim != null);
+            Cypher.Assert(spellInfo != null);
+            Cypher.Assert(item != null);
+
+            return RunScriptRet<ItemScript>(tmpscript => tmpscript.OnCastItemCombatSpell(player, victim, spellInfo, item), item.GetScriptId());
+        }
 
         //CreatureScript
         public bool OnDummyEffect(Unit caster, uint spellId, uint effIndex, Creature target)
@@ -1399,7 +1415,7 @@ namespace Game.Scripting
         {
             return RunScriptRet<T, bool>(func, id, ret);
         }
-        public U RunScriptRet<T, U>(Func<T, U> func, uint id, U ret = default(U)) where T : ScriptObject
+        public U RunScriptRet<T, U>(Func<T, U> func, uint id, U ret = default) where T : ScriptObject
         {
             var reg = GetScriptRegistry<T>();
             if (reg == null || reg.Empty())

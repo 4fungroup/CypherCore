@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ namespace Game.Collision
         {
             flags = spawn.flags;
             adtId = spawn.adtId;
-            ID = spawn.ID;
+            Id = spawn.Id;
             iPos = spawn.iPos;
             iRot = spawn.iRot;
             iScale = spawn.iScale;
@@ -44,13 +44,13 @@ namespace Game.Collision
             name = spawn.name;
         }
 
-        public static bool readFromFile(BinaryReader reader, out ModelSpawn spawn)
+        public static bool ReadFromFile(BinaryReader reader, out ModelSpawn spawn)
         {
             spawn = new ModelSpawn();
 
             spawn.flags = reader.ReadUInt32();
             spawn.adtId = reader.ReadUInt16();
-            spawn.ID = reader.ReadUInt32();
+            spawn.Id = reader.ReadUInt32();
             spawn.iPos = reader.Read<Vector3>();
             spawn.iRot = reader.Read<Vector3>();
             spawn.iScale = reader.ReadSingle();
@@ -70,7 +70,7 @@ namespace Game.Collision
 
         public uint flags;
         public ushort adtId;
-        public uint ID;
+        public uint Id;
         public Vector3 iPos;
         public Vector3 iRot;
         public float iScale;
@@ -94,7 +94,7 @@ namespace Game.Collision
             iInvScale = 1.0f / iScale;
         }
 
-        public bool intersectRay(Ray pRay, ref float pMaxDist, bool pStopAtFirstHit, ModelIgnoreFlags ignoreFlags)
+        public bool IntersectRay(Ray pRay, ref float pMaxDist, bool pStopAtFirstHit, ModelIgnoreFlags ignoreFlags)
         {
             if (iModel == null)
                 return false;
@@ -116,7 +116,7 @@ namespace Game.Collision
             return hit;
         }
 
-        public void intersectPoint(Vector3 p, AreaInfo info)
+        public void IntersectPoint(Vector3 p, AreaInfo info)
         {
             if (iModel == null)
                 return;
@@ -192,7 +192,7 @@ namespace Game.Collision
             return false;
         }
 
-        public void setUnloaded() { iModel = null; }
+        public void SetUnloaded() { iModel = null; }
 
         Matrix3 iInvRot;
         float iInvScale;

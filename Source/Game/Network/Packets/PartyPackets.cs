@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -258,17 +258,17 @@ namespace Game.Network.Packets
             if (player.IsFFAPvP())
                 MemberStats.Status |= GroupMemberOnlineStatus.PVPFFA;
 
-            if (player.isAFK())
+            if (player.IsAFK())
                 MemberStats.Status |= GroupMemberOnlineStatus.AFK;
 
-            if (player.isDND())
+            if (player.IsDND())
                 MemberStats.Status |= GroupMemberOnlineStatus.DND;
 
             if (player.GetVehicle())
                 MemberStats.Status |= GroupMemberOnlineStatus.Vehicle;
 
             // Level
-            MemberStats.Level = (ushort)player.getLevel();
+            MemberStats.Level = (ushort)player.GetLevel();
 
             // Health
             MemberStats.CurrentHealth = (int)player.GetHealth();
@@ -1032,7 +1032,7 @@ namespace Game.Network.Packets
         public void Write(WorldPacket data)
         {
             data.WriteBits(Name.GetByteCount(), 6);
-            data.WriteBits(VoiceStateID.GetByteCount(), 6);
+            data.WriteBits(VoiceStateID.GetByteCount() + 1, 6);
             data.WriteBit(FromSocialQueue);
             data.WriteBit(VoiceChatSilenced);
             data.WritePackedGuid(GUID);

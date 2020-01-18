@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -177,12 +177,12 @@ namespace Scripts.EasternKingdoms.Karazhan.Midnight
                 _scheduler.Schedule(TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(25), task =>
                 {
                     Unit target = null;
-                    var t_list = me.GetThreatManager().getThreatList();
+                    var t_list = me.GetThreatManager().GetThreatList();
                     List<Unit> target_list = new List<Unit>();
 
                     foreach (var itr in t_list)
                     {
-                        target = Global.ObjAccessor.GetUnit(me, itr.getUnitGuid());
+                        target = Global.ObjAccessor.GetUnit(me, itr.GetUnitGuid());
                         if (target && !target.IsWithinDist(me, 8.00f, false) && target.IsWithinDist(me, 25.0f, false))
                             target_list.Add(target);
 

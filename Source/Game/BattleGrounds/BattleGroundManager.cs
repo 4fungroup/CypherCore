@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -134,9 +134,9 @@ namespace Game.BattleGrounds
             header.QueueID = bg.GetQueueId();
             header.RangeMin = (byte)bg.GetMinLevel();
             header.RangeMax = (byte)bg.GetMaxLevel();
-            header.TeamSize = (byte)(bg.isArena() ? arenaType : 0);
+            header.TeamSize = (byte)(bg.IsArena() ? arenaType : 0);
             header.InstanceID = bg.GetClientInstanceID();
-            header.RegisteredMatch = bg.isRated();
+            header.RegisteredMatch = bg.IsRated();
             header.TournamentRules = false;
         }
 
@@ -180,7 +180,7 @@ namespace Game.BattleGrounds
             battlefieldStatus.WaitTime = Time.GetMSTimeDiffToNow(joinTime);
         }
 
-        public void BuildBattlegroundStatusFailed(out BattlefieldStatusFailed battlefieldStatus, Battleground bg, Player pPlayer, uint ticketId, ArenaTypes arenaType, GroupJoinBattlegroundResult result, ObjectGuid errorGuid = default(ObjectGuid))
+        public void BuildBattlegroundStatusFailed(out BattlefieldStatusFailed battlefieldStatus, Battleground bg, Player pPlayer, uint ticketId, ArenaTypes arenaType, GroupJoinBattlegroundResult result, ObjectGuid errorGuid = default)
         {
             battlefieldStatus = new BattlefieldStatusFailed();
             battlefieldStatus.Ticket.RequesterGuid = pPlayer.GetGUID();
@@ -267,7 +267,7 @@ namespace Game.BattleGrounds
             // create a copy of the BG template
             Battleground bg = bg_template.GetCopy();
 
-            bool isRandom = bgTypeId != originalBgTypeId && !bg.isArena();
+            bool isRandom = bgTypeId != originalBgTypeId && !bg.IsArena();
 
             bg.SetBracket(bracketEntry);
             bg.SetInstanceID(Global.MapMgr.GenerateInstanceId());
@@ -282,7 +282,7 @@ namespace Game.BattleGrounds
             bg.SetQueueId((ulong)bgTypeId | 0x1F10000000000000);
 
             // Set up correct min/max player counts for scoreboards
-            if (bg.isArena())
+            if (bg.IsArena())
             {
                 uint maxPlayersPerTeam = 0;
                 switch (arenaType)
@@ -451,10 +451,10 @@ namespace Game.BattleGrounds
                 if (bgTemplate.Id != BattlegroundTypeId.AA && bgTemplate.Id != BattlegroundTypeId.RB)
                 {
                     uint startId = result.Read<uint>(5);
-                    if (CliDB.WorldSafeLocsStorage.ContainsKey(startId))
+                    WorldSafeLocsEntry start = Global.ObjectMgr.GetWorldSafeLoc(startId);
+                    if (start != null)
                     {
-                        WorldSafeLocsRecord start = CliDB.WorldSafeLocsStorage.LookupByKey(startId);
-                        bgTemplate.StartLocation[TeamId.Alliance] = new Position(start.Loc.X, start.Loc.Y, start.Loc.Z, (start.Facing + MathFunctions.PI) / 180);
+                        bgTemplate.StartLocation[TeamId.Alliance] = start.Loc;
                     }
                     else
                     {
@@ -462,11 +462,11 @@ namespace Game.BattleGrounds
                         continue;
                     }
 
-                    startId = result.Read<uint>(6);                    
-                    if (CliDB.WorldSafeLocsStorage.ContainsKey(startId))
+                    startId = result.Read<uint>(6);
+                    start = Global.ObjectMgr.GetWorldSafeLoc(startId);
+                    if (start != null)
                     {
-                        WorldSafeLocsRecord start = CliDB.WorldSafeLocsStorage.LookupByKey(startId);
-                        bgTemplate.StartLocation[TeamId.Horde] = new Position(start.Loc.X, start.Loc.Y, start.Loc.Z, result.Read<float>(8));
+                        bgTemplate.StartLocation[TeamId.Horde] = start.Loc;
                     }
                     else
                     {
@@ -857,8 +857,8 @@ namespace Game.BattleGrounds
 
         public BattlegroundQueue GetBattlegroundQueue(BattlegroundQueueTypeId bgQueueTypeId) { return m_BattlegroundQueues[(int)bgQueueTypeId]; }
 
-        public bool isArenaTesting() { return m_ArenaTesting; }
-        public bool isTesting() { return m_Testing; }
+        public bool IsArenaTesting() { return m_ArenaTesting; }
+        public bool IsTesting() { return m_Testing; }
 
         public BattlegroundTypeId GetBattleMasterBG(uint entry)
         {

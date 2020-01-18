@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2067,8 +2067,8 @@ namespace Scripts.Spells.Generic
                 if (newPet.LoadPetFromDB(player, 0, player.GetLastPetNumber(), true))
                 {
                     // revive the pet if it is dead
-                    if (newPet.getDeathState() == DeathState.Dead)
-                        newPet.setDeathState(DeathState.Alive);
+                    if (newPet.GetDeathState() == DeathState.Dead)
+                        newPet.SetDeathState(DeathState.Alive);
 
                     newPet.SetFullHealth();
                     newPet.SetFullPower(newPet.GetPowerType());
@@ -2661,7 +2661,7 @@ namespace Scripts.Spells.Generic
         void OnApply(AuraEffect aurEff, AuraEffectHandleModes mode)
         {
             // store stack apply times, so we can pop them while they expire
-            _applyTimes.Add(Time.GetMSTime());
+            _applyTimes.Add(GameTime.GetGameTimeMS());
             Unit target = GetTarget();
 
             // on stack 15 cast the achievement crediting spell
@@ -2675,7 +2675,7 @@ namespace Scripts.Spells.Generic
                 return;
 
             // pop stack if it expired for us
-            if (_applyTimes.First() + GetMaxDuration() < Time.GetMSTime())
+            if (_applyTimes.First() + GetMaxDuration() < GameTime.GetGameTimeMS())
                 ModStackAmount(-1, AuraRemoveMode.Expire);
         }
 
@@ -2703,7 +2703,7 @@ namespace Scripts.Spells.Generic
                         return;
                 }
 
-                CreateItem(effIndex, itemId[RandomHelper.URand(0, 4)]);
+                CreateItem(effIndex, itemId[RandomHelper.URand(0, 4)], ItemContext.None);
             }
         }
 
@@ -2897,7 +2897,7 @@ namespace Scripts.Spells.Generic
             if (player)
             {
                 // Reset player faction + allow combat + allow duels
-                player.setFactionForRace(player.GetRace());
+                player.SetFactionForRace(player.GetRace());
                 player.RemoveUnitFlag(UnitFlags.NonAttackable);
                 // save player
                 player.SaveToDB();

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -734,7 +734,7 @@ namespace Game.Scripting
         public Item GetCastItem() { return m_spell.m_CastItem; }
 
         // Creates item. Calls Spell.DoCreateItem method.
-        public void CreateItem(uint effIndex, uint itemId) { m_spell.DoCreateItem(effIndex, itemId); }
+        public void CreateItem(uint effIndex, uint itemId, ItemContext context) { m_spell.DoCreateItem(effIndex, itemId, context); }
 
         // Returns SpellInfo from the spell that triggered the current one
         public SpellInfo GetTriggeringSpell() { return m_spell.m_triggeredByAuraSpell; }
@@ -743,7 +743,7 @@ namespace Game.Scripting
         public void FinishCast(SpellCastResult result, uint? param1 = null, uint? param2 = null)
         {
             m_spell.SendCastResult(result, param1, param2);
-            m_spell.finish(result == SpellCastResult.SpellCastOk);
+            m_spell.Finish(result == SpellCastResult.SpellCastOk);
         }
 
         public void SetCustomCastResultMessage(SpellCustomErrors result)

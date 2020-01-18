@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -238,6 +238,7 @@ namespace Game.Chat
                 Global.ObjectMgr.CheckCreatureTemplate(cInfo);
             }
 
+            Global.ObjectMgr.InitializeQueriesData(QueryDataGroup.Creatures);
             handler.SendGlobalGMSysMessage("Creature template reloaded.");
             return true;
         }
@@ -607,6 +608,7 @@ namespace Game.Chat
         {
             Log.outInfo(LogFilter.Server, "Re-Loading Quest POI ...");
             Global.ObjectMgr.LoadQuestPOI();
+            Global.ObjectMgr.InitializeQueriesData(QueryDataGroup.POIs);
             handler.SendGlobalGMSysMessage("DB Table `quest_poi` and `quest_poi_points` reloaded.");
             return true;
         }
@@ -616,6 +618,7 @@ namespace Game.Chat
         {
             Log.outInfo(LogFilter.Server, "Re-Loading Quest Templates...");
             Global.ObjectMgr.LoadQuests();
+            Global.ObjectMgr.InitializeQueriesData(QueryDataGroup.Quests);
             handler.SendGlobalGMSysMessage("DB table `quest_template` (quest definitions) reloaded.");
 
             // dependent also from `gameobject` but this table not reloaded anyway

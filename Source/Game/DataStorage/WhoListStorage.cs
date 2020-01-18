@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -85,7 +85,7 @@ namespace Game.DataStorage
                 if (guild)
                     guildGuid = guild.GetGUID();
 
-                _whoListStorage.Add(new WhoListPlayerInfo(player.GetGUID(), player.GetTeam(), player.GetSession().GetSecurity(), player.getLevel(),
+                _whoListStorage.Add(new WhoListPlayerInfo(player.GetGUID(), player.GetTeam(), player.GetSession().GetSecurity(), player.GetLevel(),
                     player.GetClass(), player.GetRace(), player.GetZoneId(), player.m_playerData.NativeSex, player.IsVisible(),
                     player.IsGameMaster(), playerName, guildName, guildGuid));
             }

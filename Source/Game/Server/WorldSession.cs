@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -101,7 +101,7 @@ namespace Game
                 //FIXME: logout must be delayed in case lost connection with client in time of combat
                 if (GetPlayer().GetDeathTimer() != 0)
                 {
-                    _player.getHostileRefManager().deleteReferences();
+                    _player.GetHostileRefManager().DeleteReferences();
                     _player.BuildPlayerRepop();
                     _player.RepopAtGraveyard();
                 }
@@ -179,7 +179,7 @@ namespace Game
 
                 // remove player from the group if he is:
                 // a) in group; b) not in raid group; c) logging out normally (not being kicked or disconnected)
-                if (_player.GetGroup() && !_player.GetGroup().isRaidGroup() && m_Socket[(int)ConnectionType.Realm] != null)
+                if (_player.GetGroup() && !_player.GetGroup().IsRaidGroup() && m_Socket[(int)ConnectionType.Realm] != null)
                     _player.RemoveFromGroup();
 
                 //! Send update to group and reset stored max enchanting level
@@ -202,7 +202,7 @@ namespace Game
                 // calls to GetMap in this case may cause crashes
                 GetPlayer().CleanupsBeforeDelete();
                 Log.outInfo(LogFilter.Player, "Account: {0} (IP: {1}) Logout Character:[{2}] (GUID: {3}) Level: {4}",
-                    GetAccountId(), GetRemoteAddress(), _player.GetName(), _player.GetGUID().ToString(), _player.getLevel());
+                    GetAccountId(), GetRemoteAddress(), _player.GetName(), _player.GetGUID().ToString(), _player.GetLevel());
 
                 Map map = GetPlayer().GetMap();
                 if (map != null)
@@ -622,7 +622,7 @@ namespace Game
         public string GetOS() { return _os; }
         public void SetInQueue(bool state) { m_inQueue = state; }
 
-        public bool isLogingOut() { return _logoutTime != 0 || m_playerLogout; }
+        public bool IsLogingOut() { return _logoutTime != 0 || m_playerLogout; }
 
         public ulong GetConnectToInstanceKey() { return _instanceConnectKey.Raw; }
 

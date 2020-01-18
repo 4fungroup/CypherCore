@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -327,7 +327,7 @@ namespace Game.Guilds
                             CriteriaManager.WalkCriteriaTree(tree, node =>
                             {
                                 if (node.Criteria != null)
-                                    criteriaIds.Add(node.Criteria.ID);
+                                    criteriaIds.Add(node.Criteria.Id);
                             });
                         }
                     }
@@ -1091,6 +1091,29 @@ namespace Game.Guilds
             member.AddFlag(GuildMemberFlags.Online);
         }
 
+        public void SendEventAwayChanged(ObjectGuid memberGuid, bool afk, bool dnd)
+        {
+            Member member = GetMember(memberGuid);
+            if (member == null)
+                return;
+
+            if (afk)
+                member.AddFlag(GuildMemberFlags.AFK);
+            else
+                member.RemoveFlag(GuildMemberFlags.AFK);
+
+            if (dnd)
+                member.AddFlag(GuildMemberFlags.DND);
+            else
+                member.RemoveFlag(GuildMemberFlags.DND);
+
+            GuildEventAwayChange awayChange = new GuildEventAwayChange();
+            awayChange.Guid = memberGuid;
+            awayChange.AFK = afk;
+            awayChange.DND = dnd;
+            BroadcastPacket(awayChange);
+        }
+
         void SendEventBankMoneyChanged()
         {
             GuildEventBankMoneyChanged eventPacket = new GuildEventBankMoneyChanged();
@@ -1315,7 +1338,7 @@ namespace Game.Guilds
 
         public bool LoadBankItemFromDB(SQLFields field)
         {
-            byte tabId = field.Read<byte>(45);
+            byte tabId = field.Read<byte>(44);
             if (tabId >= _GetPurchasedTabsSize())
             {
                 Log.outError(LogFilter.Guild, "Invalid tab for item (GUID: {0}, id: {1}) in guild bank, skipped.",
@@ -2480,7 +2503,7 @@ namespace Game.Guilds
             public void SetStats(Player player)
             {
                 m_name = player.GetName();
-                m_level = (byte)player.getLevel();
+                m_level = (byte)player.GetLevel();
                 m_class = player.GetClass();
                 _gender = (Gender)(byte)player.m_playerData.NativeSex;
                 m_zoneId = player.GetZoneId();
@@ -3218,7 +3241,7 @@ namespace Game.Guilds
 
             public bool LoadItemFromDB(SQLFields field)
             {
-                byte slotId = field.Read<byte>(46);
+                byte slotId = field.Read<byte>(45);
                 uint itemGuid = field.Read<uint>(0);
                 uint itemEntry = field.Read<uint>(1);
                 if (slotId >= GuildConst.MaxBankSlots)
@@ -3751,7 +3774,7 @@ namespace Game.Guilds
 
                 // Reserve space
                 ItemPosCount pos = new ItemPosCount(slotId, requiredSpace);
-                if (!pos.isContainedIn(m_vec))
+                if (!pos.IsContainedIn(m_vec))
                 {
                     m_vec.Add(pos);
                     count -= requiredSpace;

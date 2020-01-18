@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,12 +52,5 @@ namespace Game.DataStorage
         public uint ItemID;
         public uint ItemQuantity;
         public uint RewardPackID;
-    }
-
-    public sealed class RulesetItemUpgradeRecord
-    {
-        public uint Id;
-        public uint ItemID;
-        public ushort ItemUpgradeID;
     }
 }

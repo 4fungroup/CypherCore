@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1313,7 +1313,7 @@ namespace Scripts.Northrend.CrusadersColiseum.TrialOfTheCrusader
                         break;
                     case 400:
                         Talk(Texts.Stage_0_06);
-                        me.GetThreatManager().clearReferences();
+                        me.GetThreatManager().ClearReferences();
                         _updateTimer = 5 * Time.InMilliseconds;
                         _instance.SetData(DataTypes.Event, 0);
                         break;

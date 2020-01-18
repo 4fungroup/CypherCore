@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ using Game.Mails;
 using Game.Network.Packets;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace Game
 {
@@ -426,19 +427,14 @@ namespace Game
 
         public bool RemoveAuction(AuctionEntry auction)
         {
-            bool wasInMap = AuctionsMap.Remove(auction.Id) ? true : false;
-
             Global.ScriptMgr.OnAuctionRemove(this, auction);
 
-            // we need to delete the entry, it is not referenced any more
-            auction = null;
-
-            return wasInMap;
+            return AuctionsMap.TryRemove(auction.Id, out AuctionEntry removedItem);
         }
 
         public void Update()
         {
-            long curTime = Global.WorldMgr.GetGameTime();
+            long curTime = GameTime.GetGameTime();
             // Handle expired auctions
 
             // If storage is empty, no need to update. next == NULL in this case.
@@ -507,7 +503,7 @@ namespace Game
 
         public void BuildListAuctionItems(AuctionListItemsResult packet, Player player, string searchedname, uint listfrom, byte levelmin, byte levelmax, bool usable, Optional<AuctionSearchFilters> filters, uint quality)
         {
-            long curTime = Global.WorldMgr.GetGameTime();
+            long curTime = GameTime.GetGameTime();
 
             foreach (var Aentry in AuctionsMap.Values)
             {
@@ -570,7 +566,7 @@ namespace Game
             return AuctionsMap.LookupByKey(id);
         }
 
-        Dictionary<uint, AuctionEntry> AuctionsMap = new Dictionary<uint, AuctionEntry>();
+        ConcurrentDictionary<uint, AuctionEntry> AuctionsMap = new ConcurrentDictionary<uint, AuctionEntry>();
     }
 
     public class AuctionEntry
@@ -761,12 +757,12 @@ namespace Game
 
         public string BuildAuctionMailSubject(MailAuctionAnswers response)
         {
-            return $"{itemEntry}:0:{response}:{Id}:{itemCount}";
+            return $"{itemEntry}:0:{(uint)response}:{Id}:{itemCount}";
         }
 
         public static string BuildAuctionMailBody(ulong lowGuid, ulong bid, ulong buyout, ulong deposit, ulong cut)
         {
-            return string.Format($"{lowGuid}:{bid}:{buyout}:{deposit}:{cut}");
+            return $"{lowGuid}:{bid}:{buyout}:{deposit}:{cut}";
         }
 
         // helpers

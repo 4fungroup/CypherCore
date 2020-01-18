@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,14 +19,13 @@ using Framework.GameMath;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace Game.DataStorage
 {
     public class M2Storage
     {
         // Convert the geomoetry from a spline value, to an actual WoW XYZ
-        static Vector3 translateLocation(Vector4 dbcLocation, Vector3 basePosition, Vector3 splineVector)
+        static Vector3 TranslateLocation(Vector4 dbcLocation, Vector3 basePosition, Vector3 splineVector)
         {
             Vector3 work = new Vector3();
             float x = basePosition.X + splineVector.X;
@@ -45,7 +44,7 @@ namespace Game.DataStorage
         }
 
         // Number of cameras not used. Multiple cameras never used in 7.1.5
-        static void readCamera(M2Camera cam, BinaryReader reader, CinematicCameraRecord dbcentry)
+        static void ReadCamera(M2Camera cam, BinaryReader reader, CinematicCameraRecord dbcentry)
         {
             List<FlyByCamera> cameras = new List<FlyByCamera>();
             List<FlyByCamera> targetcam = new List<FlyByCamera>();
@@ -74,7 +73,7 @@ namespace Game.DataStorage
                 for (uint i = 0; i < targTsArray.number; ++i)
                 {
                     // Translate co-ordinates
-                    Vector3 newPos = translateLocation(dbcData, cam.target_position_base, targPositions[i].p0);
+                    Vector3 newPos = TranslateLocation(dbcData, cam.target_position_base, targPositions[i].p0);
 
                     // Add to vector
                     FlyByCamera thisCam = new FlyByCamera();
@@ -106,7 +105,7 @@ namespace Game.DataStorage
                 for (uint i = 0; i < posTsArray.number; ++i)
                 {
                     // Translate co-ordinates
-                    Vector3 newPos = translateLocation(dbcData, cam.position_base, positions[i].p0);
+                    Vector3 newPos = TranslateLocation(dbcData, cam.position_base, positions[i].p0);
 
                     // Add to vector
                     FlyByCamera thisCam = new FlyByCamera();
@@ -190,7 +189,7 @@ namespace Game.DataStorage
                         M2Camera cam = m2file.Read<M2Camera>();
 
                         m2file.BaseStream.Position = 8;
-                        readCamera(cam, new BinaryReader(new MemoryStream(m2file.ReadBytes((int)m2file.BaseStream.Length - 8))), cameraEntry);
+                        ReadCamera(cam, new BinaryReader(new MemoryStream(m2file.ReadBytes((int)m2file.BaseStream.Length - 8))), cameraEntry);
                     }
                 }
                 catch (EndOfStreamException)

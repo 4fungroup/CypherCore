@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -450,11 +450,11 @@ namespace Game.Network.Packets
         public override void Write()
         {
             _worldPacket.WriteInt32(MapID);
-            _worldPacket.WriteVector3(Loc);
+            _worldPacket.WriteXYZ(Loc);
         }
 
         public int MapID;
-        public Vector3 Loc;
+        public WorldLocation Loc;
     }
 
     public class PortGraveyard : ClientPacket

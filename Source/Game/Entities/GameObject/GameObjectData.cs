@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@ using Framework.Constants;
 using Framework.GameMath;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Game.Network.Packets;
 
 namespace Game.Entities
 {
@@ -209,6 +210,9 @@ namespace Game.Entities
         [FieldOffset(68)]
         public raw Raw;
 
+        [FieldOffset(208)]
+        public QueryGameObjectResponse QueryData;
+
         // helpers
         public bool IsDespawnAtAction()
         {
@@ -368,7 +372,7 @@ namespace Game.Entities
                 default:
                     break;
             }
-            return autoCloseTime / Time.InMilliseconds;   // prior to 3.0.3, conversion was / 0x10000;
+            return autoCloseTime;   // prior to 3.0.3, conversion was / 0x10000;
         }
 
         public uint GetLootId()
@@ -511,6 +515,39 @@ namespace Game.Entities
                     return GatheringNode.LargeAOI != 0;
                 default: return false;
             }
+        }
+
+        public void InitializeQueryData()
+        {
+            QueryData = new QueryGameObjectResponse();
+
+            QueryData.GameObjectID = entry;
+            QueryData.Allow = true;
+
+            GameObjectStats stats = new GameObjectStats();
+            stats.Type = (uint)type;
+            stats.DisplayID = displayId;
+
+            stats.Name[0] = name;
+            stats.IconName = IconName;
+            stats.CastBarCaption = castBarCaption;
+            stats.UnkString = unk1;
+
+            stats.Size = size;
+
+            var items = Global.ObjectMgr.GetGameObjectQuestItemList(entry);
+            foreach (uint item in items)
+                stats.QuestItems.Add(item);
+
+            unsafe
+            {
+                for (int i = 0; i < SharedConst.MaxGOData; i++)
+                    stats.Data[i] = Raw.data[i];
+            }
+
+            stats.RequiredLevel = (uint)RequiredLevel;
+
+            QueryData.Stats = stats;
         }
 
         #region TypeStructs

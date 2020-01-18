@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,9 +30,9 @@ namespace Game.Entities
             BasicData = item;
             ExtendedData = sparse;
 
-            Specializations[0] = new BitArray((int)Class.Max * PlayerConst.MaxSpecializations);
-            Specializations[1] = new BitArray((int)Class.Max * PlayerConst.MaxSpecializations);
-            Specializations[2] = new BitArray((int)Class.Max * PlayerConst.MaxSpecializations);
+            Specializations[0] = new BitSet((int)Class.Max * PlayerConst.MaxSpecializations);
+            Specializations[1] = new BitSet((int)Class.Max * PlayerConst.MaxSpecializations);
+            Specializations[2] = new BitSet((int)Class.Max * PlayerConst.MaxSpecializations);
         }
 
         public string GetName(LocaleConstant locale = SharedConst.DefaultLocale)
@@ -234,9 +234,9 @@ namespace Game.Entities
                 return false;
 
             int levelIndex = 0;
-            if (player.getLevel() >= 110)
+            if (player.GetLevel() >= 110)
                 levelIndex = 2;
-            else if (player.getLevel() > 40)
+            else if (player.GetLevel() > 40)
                 levelIndex = 1;
 
             return Specializations[levelIndex].Get(CalculateItemSpecBit(chrSpecialization));
@@ -254,7 +254,7 @@ namespace Game.Entities
         public ItemFlags GetFlags() { return (ItemFlags)ExtendedData.Flags[0]; }
         public ItemFlags2 GetFlags2() { return (ItemFlags2)ExtendedData.Flags[1]; }
         public ItemFlags3 GetFlags3() { return (ItemFlags3)ExtendedData.Flags[2]; }
-        public uint GetFlags4() { return ExtendedData.Flags[3]; }
+        public ItemFlags4 GetFlags4() { return (ItemFlags4)ExtendedData.Flags[3]; }
         public float GetPriceRandomValue() { return ExtendedData.PriceRandomValue; }
         public float GetPriceVariance() { return ExtendedData.PriceVariance; }
         public uint GetBuyCount() { return Math.Max(ExtendedData.VendorStackCount, 1u); }
@@ -296,7 +296,7 @@ namespace Game.Entities
         public uint GetStartQuest() { return ExtendedData.StartQuestID; }
         public uint GetLockID() { return ExtendedData.LockID; }
         public uint GetItemSet() { return ExtendedData.ItemSet; }
-        public uint GetArea() { return ExtendedData.ZoneBound; }
+        public uint GetArea(int index) { return ExtendedData.ZoneBound[index]; }
         public uint GetMap() { return ExtendedData.InstanceBound; }
         public BagFamilyMask GetBagFamily() { return (BagFamilyMask)ExtendedData.BagFamily; }
         public uint GetTotemCategory() { return ExtendedData.TotemCategoryID; }
@@ -344,7 +344,7 @@ namespace Game.Entities
         public ItemFlagsCustom FlagsCu;
         public float SpellPPMRate;
         public uint RandomBonusListTemplateId;
-        public BitArray[] Specializations = new BitArray[3];
+        public BitSet[] Specializations = new BitSet[3];
         public uint ItemSpecClassMask;
 
         protected ItemRecord BasicData;

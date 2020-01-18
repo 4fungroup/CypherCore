@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ namespace Game.Entities
     {
         public DynamicObject(bool isWorldObject) : base(isWorldObject)
         {
-            objectTypeMask |= TypeMask.DynamicObject;
-            objectTypeId = TypeId.DynamicObject;
+            ObjectTypeMask |= TypeMask.DynamicObject;
+            ObjectTypeId = TypeId.DynamicObject;
 
             m_updateFlag.Stationary = true;
 
@@ -97,10 +97,10 @@ namespace Game.Entities
             SetUpdateFieldValue(m_values.ModifyValue(m_dynamicObjectData).ModifyValue(m_dynamicObjectData.SpellXSpellVisualID), spellXSpellVisualId);
             SetUpdateFieldValue(m_values.ModifyValue(m_dynamicObjectData).ModifyValue(m_dynamicObjectData.SpellID), spell.Id);
             SetUpdateFieldValue(m_values.ModifyValue(m_dynamicObjectData).ModifyValue(m_dynamicObjectData.Radius), radius);
-            SetUpdateFieldValue(m_values.ModifyValue(m_dynamicObjectData).ModifyValue(m_dynamicObjectData.CastTime), Time.GetMSTime());
+            SetUpdateFieldValue(m_values.ModifyValue(m_dynamicObjectData).ModifyValue(m_dynamicObjectData.CastTime), GameTime.GetGameTimeMS());
 
             if (IsWorldObject())
-                setActive(true);    //must before add to map to be put in world container
+                SetActive(true);    //must before add to map to be put in world container
 
             Transport transport = caster.GetTransport();
             if (transport)

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,8 +25,8 @@ namespace Game.Entities
     {
         public Bag()
         {
-            objectTypeMask |= TypeMask.Container;
-            objectTypeId = TypeId.Container;
+            ObjectTypeMask |= TypeMask.Container;
+            ObjectTypeId = TypeId.Container;
 
             m_containerData = new ContainerData();
         }
@@ -70,7 +70,7 @@ namespace Game.Entities
             base.RemoveFromWorld();
         }
 
-        public override bool Create(ulong guidlow, uint itemid, Player owner)
+        public override bool Create(ulong guidlow, uint itemid, ItemContext context, Player owner)
         {
             var itemProto = Global.ObjectMgr.GetItemTemplate(itemid);
 
@@ -93,6 +93,7 @@ namespace Game.Entities
             SetUpdateFieldValue(m_values.ModifyValue(m_itemData).ModifyValue(m_itemData.MaxDurability), itemProto.MaxDurability);
             SetDurability(itemProto.MaxDurability);
             SetCount(1);
+            SetContext(context);
 
             // Setting the number of Slots the Container has
             SetBagSize(itemProto.GetContainerSlots());
@@ -286,11 +287,6 @@ namespace Game.Entities
         void SetBagSize(uint numSlots) { SetUpdateFieldValue(m_values.ModifyValue(m_containerData).ModifyValue(m_containerData.NumSlots), numSlots); }
 
         void SetSlot(int slot, ObjectGuid guid) { SetUpdateFieldValue(ref m_values.ModifyValue(m_containerData).ModifyValue(m_containerData.Slots, slot), guid); }
-
-        public static Item NewItemOrBag(ItemTemplate proto)
-        {
-            return (proto.GetInventoryType() == InventoryType.Bag) ? new Bag() : new Item();
-        }
 
         ContainerData m_containerData;
         Item[] m_bagslot = new Item[36];

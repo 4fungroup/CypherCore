@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,7 +72,7 @@ namespace Scripts.Northrend.CrusadersColiseum.TrialOfTheChampion
     }
 
     [Script]
-    class generic_vehicleAI_toc5 : npc_escortAI
+    class generic_vehicleAI_toc5 : NpcEscortAI
     {
         public generic_vehicleAI_toc5(Creature creature) : base(creature)
         {

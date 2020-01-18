@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,18 +88,18 @@ namespace Game
                 return;
             }
 
-            if (!player.GetSocial().HasFriend(GetPlayer().GetGUID()) && GetPlayer().getLevel() < WorldConfig.GetIntValue(WorldCfg.PartyLevelReq))
+            if (!player.GetSocial().HasFriend(GetPlayer().GetGUID()) && GetPlayer().GetLevel() < WorldConfig.GetIntValue(WorldCfg.PartyLevelReq))
             {
                 SendPartyResult(PartyOperation.Invite, player.GetName(), PartyResult.InviteRestricted);
                 return;
             }
 
             Group group = GetPlayer().GetGroup();
-            if (group && group.isBGGroup())
+            if (group && group.IsBGGroup())
                 group = GetPlayer().GetOriginalGroup();
 
             Group group2 = player.GetGroup();
-            if (group2 && group2.isBGGroup())
+            if (group2 && group2.IsBGGroup())
                 group2 = player.GetOriginalGroup();
 
             PartyInvite partyInvite;
@@ -421,7 +421,7 @@ namespace Game
                 group.SendTargetIconList(this, packet.PartyIndex);
             else                                        // target icon update
             {
-                if (group.isRaidGroup() && !group.IsLeader(GetPlayer().GetGUID()) && !group.IsAssistant(GetPlayer().GetGUID()))
+                if (group.IsRaidGroup() && !group.IsLeader(GetPlayer().GetGUID()) && !group.IsAssistant(GetPlayer().GetGUID()))
                     return;
 
                 if (packet.Target.IsPlayer())
@@ -645,7 +645,7 @@ namespace Game
             if (!group)
                 return;
 
-            if (group.isRaidGroup() && !group.IsLeader(GetPlayer().GetGUID()) && !group.IsAssistant(GetPlayer().GetGUID()))
+            if (group.IsRaidGroup() && !group.IsLeader(GetPlayer().GetGUID()) && !group.IsAssistant(GetPlayer().GetGUID()))
                 return;
 
             group.DeleteRaidMarker(packet.MarkerId);

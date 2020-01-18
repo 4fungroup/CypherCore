@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,26 +15,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-using Framework.Collections;
 using Framework.Constants;
 using Framework.Dynamic;
 using Framework.GameMath;
-using Framework.IO;
 using Game.AI;
 using Game.BattleFields;
-using Game.DataStorage;
 using Game.Maps;
 using Game.Network;
 using Game.Network.Packets;
 using Game.Scenarios;
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Linq.Expressions;
-using System.Reflection;
 
 namespace Game.Entities
 {
@@ -48,8 +39,8 @@ namespace Game.Entities
             m_serverSideVisibility.SetValue(ServerSideVisibilityType.Ghost, GhostVisibilityType.Alive | GhostVisibilityType.Ghost);
             m_serverSideVisibilityDetect.SetValue(ServerSideVisibilityType.Ghost, GhostVisibilityType.Alive);
 
-            objectTypeId = TypeId.Object;
-            objectTypeMask = TypeMask.Object;
+            ObjectTypeId = TypeId.Object;
+            ObjectTypeMask = TypeMask.Object;
 
             m_values = new UpdateFieldHolder(this);
 
@@ -75,7 +66,7 @@ namespace Game.Entities
             if (IsInWorld)
             {
                 Log.outFatal(LogFilter.Misc, "WorldObject.Dispose() {0} deleted but still in world!!", GetGUID().ToString());
-                if (isTypeMask(TypeMask.Item))
+                if (IsTypeMask(TypeMask.Item))
                     Log.outFatal(LogFilter.Misc, "Item slot {0}", ((Item)this).GetSlot());
                 Cypher.Assert(false);
             }
@@ -107,7 +98,7 @@ namespace Game.Entities
             if (!IsInWorld)
                 return;
 
-            if (!objectTypeMask.HasAnyFlag(TypeMask.Item | TypeMask.Container))
+            if (!ObjectTypeMask.HasAnyFlag(TypeMask.Item | TypeMask.Container))
                 DestroyForNearbyPlayers();
 
             IsInWorld = false;
@@ -120,8 +111,8 @@ namespace Game.Entities
                 return;
 
             UpdateType updateType = UpdateType.CreateObject;
-            TypeId tempObjectType = objectTypeId;
-            TypeMask tempObjectTypeMask = objectTypeMask;
+            TypeId tempObjectType = ObjectTypeId;
+            TypeMask tempObjectTypeMask = ObjectTypeMask;
             CreateObjectBits flags = m_updateFlag;
 
             if (target == this)
@@ -164,7 +155,7 @@ namespace Game.Entities
             if (flags.Stationary)
             {
                 // UPDATETYPE_CREATE_OBJECT2 for some gameobject types...
-                if (isTypeMask(TypeMask.GameObject))
+                if (IsTypeMask(TypeMask.GameObject))
                 {
                     switch (ToGameObject().GetGoType())
                     {
@@ -336,25 +327,28 @@ namespace Game.Entities
                 data.WriteFloat(unit.GetSpeed(UnitMoveType.TurnRate));
                 data.WriteFloat(unit.GetSpeed(UnitMoveType.PitchRate));
 
-                data.WriteUInt32(0); // unit.m_movementInfo.forces.size()
-                data.WriteFloat(1.0f); // MovementForcesModMagnitude
+                MovementForces movementForces = unit.GetMovementForces();
+                if (movementForces != null)
+                {
+                    data.WriteInt32(movementForces.GetForces().Count);
+                    data.WriteFloat(movementForces.GetModMagnitude());          // MovementForcesModMagnitude
+                }
+                else
+                {
+                    data.WriteUInt32(0);
+                    data.WriteFloat(1.0f);                                       // MovementForcesModMagnitude
+                }
 
                 data.WriteBit(HasSpline);
                 data.FlushBits();
 
-                //for (public uint i = 0; i < unit.m_movementInfo.forces.Count; ++i)
-                //{
-                //    *data << ObjectGuid(ID);
-                //    *data << Vector3(Origin);
-                //    *data << Vector3(Direction);
-                //    *data << uint32(TransportID);
-                //    *data.WriteFloat(Magnitude);
-                //    *data.WriteBits(Type, 2);
-                //}
+                if (movementForces != null)
+                    foreach (MovementForce force in movementForces.GetForces())
+                        MovementExtensions.WriteMovementForceWithDirection(force, data, unit);
 
                 // HasMovementSpline - marks that spline data is present in packet
                 if (HasSpline)
-                    MovementExtensions.WriteCreateObjectSplineDataBlock(unit.moveSpline, data);
+                    MovementExtensions.WriteCreateObjectSplineDataBlock(unit.MoveSpline, data);
             }
 
             data.WriteInt32(PauseTimesCount);
@@ -382,7 +376,7 @@ namespace Game.Entities
                 if (go1 && go1.ToTransport())                                    // ServerTime
                     data.WriteUInt32(go1.GetGoValue().Transport.PathProgress);
                 else
-                    data.WriteUInt32(Time.GetMSTime());
+                    data.WriteUInt32(GameTime.GetGameTimeMS());
             }
 
             if (flags.Vehicle)
@@ -515,19 +509,13 @@ namespace Game.Entities
                 {
                     unsafe
                     {
-                        fixed (float* ptr = areaTriggerTemplate.BoxDatas.Extents)
-                        {
-                            data.WriteFloat(ptr[0]);
-                            data.WriteFloat(ptr[1]);
-                            data.WriteFloat(ptr[2]);
-                        }
+                        data.WriteFloat(areaTriggerTemplate.BoxDatas.Extents[0]);
+                        data.WriteFloat(areaTriggerTemplate.BoxDatas.Extents[1]);
+                        data.WriteFloat(areaTriggerTemplate.BoxDatas.Extents[2]);
 
-                        fixed (float* ptr = areaTriggerTemplate.BoxDatas.ExtentsTarget)
-                        {
-                            data.WriteFloat(ptr[0]);
-                            data.WriteFloat(ptr[1]);
-                            data.WriteFloat(ptr[2]);
-                        }
+                        data.WriteFloat(areaTriggerTemplate.BoxDatas.ExtentsTarget[0]);
+                        data.WriteFloat(areaTriggerTemplate.BoxDatas.ExtentsTarget[1]);
+                        data.WriteFloat(areaTriggerTemplate.BoxDatas.ExtentsTarget[2]);
                     }
                 }
 
@@ -735,7 +723,7 @@ namespace Game.Entities
             return UpdateFieldFlag.None;
         }
 
-        void BuildValuesUpdateWithFlag(ByteBuffer data, UpdateFieldFlag flags, Player target)
+        public virtual void BuildValuesUpdateWithFlag(WorldPacket data, UpdateFieldFlag flags, Player target)
         {
             data.WriteUInt32(0);
             data.WriteUInt32(0);
@@ -946,7 +934,7 @@ namespace Game.Entities
 
             GetMap().AddObjectToSwitchList(this, on);
         }
-        public void setActive(bool on)
+        public void SetActive(bool on)
         {
             if (m_isActive == on)
                 return;
@@ -1036,7 +1024,7 @@ namespace Game.Entities
 
         public float GetGridActivationRange()
         {
-            if (isActiveObject())
+            if (IsActiveObject())
             {
                 if (GetTypeId() == TypeId.Player && ToPlayer().GetCinematicMgr().IsOnCinematic())
                     return Math.Max(SharedConst.DefaultVisibilityInstance, GetMap().GetVisibilityRange());
@@ -1054,7 +1042,7 @@ namespace Game.Entities
         {
             if (IsVisibilityOverridden() && !IsTypeId(TypeId.Player))
                 return m_visibilityDistanceOverride.Value;
-            else if (isActiveObject() && !IsTypeId(TypeId.Player))
+            else if (IsActiveObject() && !IsTypeId(TypeId.Player))
                 return SharedConst.MaxVisibilityDistance;
             else
                 return GetMap().GetVisibilityRange();
@@ -1068,7 +1056,7 @@ namespace Game.Entities
                 {
                     if (target != null && target.IsVisibilityOverridden() && !target.IsTypeId(TypeId.Player))
                         return target.m_visibilityDistanceOverride.Value;
-                    else if (target != null && target.isActiveObject() && !target.IsTypeId(TypeId.Player))
+                    else if (target != null && target.IsActiveObject() && !target.IsTypeId(TypeId.Player))
                         return SharedConst.MaxVisibilityDistance;
                     else if (ToPlayer().GetCinematicMgr().IsOnCinematic())
                         return SharedConst.DefaultVisibilityInstance;
@@ -1081,7 +1069,7 @@ namespace Game.Entities
                     return SharedConst.SightRangeUnit;
             }
 
-            if (IsTypeId(TypeId.DynamicObject) && isActiveObject())
+            if (IsTypeId(TypeId.DynamicObject) && IsActiveObject())
             {
                 return GetMap().GetVisibilityRange();
             }
@@ -1490,7 +1478,7 @@ namespace Game.Entities
             if (IsTypeId(TypeId.Player) || IsTypeId(TypeId.Unit))
             {
                 summon.SetFaction(ToUnit().GetFaction());
-                summon.SetLevel(ToUnit().getLevel());
+                summon.SetLevel(ToUnit().GetLevel());
             }
 
             if (AI != null)
@@ -1541,6 +1529,14 @@ namespace Game.Entities
             var searcher = new GameObjectLastSearcher(this, checker);
 
             Cell.VisitGridObjects(this, searcher, range);
+            return searcher.GetTarget();
+        }
+
+        public Player SelectNearestPlayer(float distance)
+        {
+            var checker = new NearestPlayerInObjectRangeCheck(this, distance);
+            var searcher = new PlayerLastSearcher(this, checker);
+            Cell.VisitAllObjects(this, searcher, distance);
             return searcher.GetTarget();
         }
 
@@ -1636,7 +1632,7 @@ namespace Game.Entities
                 if (!player.HaveAtClient(this))
                     continue;
 
-                if (isTypeMask(TypeMask.Unit) && (ToUnit().GetCharmerGUID() == player.GetGUID()))// @todo this is for puppet
+                if (IsTypeMask(TypeMask.Unit) && (ToUnit().GetCharmerGUID() == player.GetGUID()))// @todo this is for puppet
                     continue;
 
                 DestroyForPlayer(player);
@@ -1696,17 +1692,17 @@ namespace Game.Entities
         public void RemoveDynamicFlag(UnitDynFlags flag) { RemoveUpdateFieldFlagValue(m_values.ModifyValue(m_objectData).ModifyValue(m_objectData.DynamicFlags), (uint)flag); }
         public void SetDynamicFlags(UnitDynFlags flag) { SetUpdateFieldValue(m_values.ModifyValue(m_objectData).ModifyValue(m_objectData.DynamicFlags), (uint)flag); }
 
-        public TypeId GetTypeId() { return objectTypeId; }
+        public TypeId GetTypeId() { return ObjectTypeId; }
         public bool IsTypeId(TypeId typeId) { return GetTypeId() == typeId; }
-        public bool isTypeMask(TypeMask mask) { return Convert.ToBoolean(mask & objectTypeMask); }
+        public bool IsTypeMask(TypeMask mask) { return Convert.ToBoolean(mask & ObjectTypeMask); }
 
-        public virtual bool hasQuest(uint questId) { return false; }
-        public virtual bool hasInvolvedQuest(uint questId) { return false; }
+        public virtual bool HasQuest(uint questId) { return false; }
+        public virtual bool HasInvolvedQuest(uint questId) { return false; }
 
         public bool IsCreature() { return GetTypeId() == TypeId.Unit; }
         public bool IsPlayer() { return GetTypeId() == TypeId.Player; }
         public bool IsGameObject() { return GetTypeId() == TypeId.GameObject; }
-        public bool IsUnit() { return isTypeMask(TypeMask.Unit); }
+        public bool IsUnit() { return IsTypeMask(TypeMask.Unit); }
         public bool IsCorpse() { return GetTypeId() == TypeId.Corpse; }
         public bool IsDynObject() { return GetTypeId() == TypeId.DynamicObject; }
         public bool IsAreaTrigger() { return GetTypeId() == TypeId.AreaTrigger; }
@@ -1730,13 +1726,13 @@ namespace Game.Entities
         public ZoneScript GetZoneScript() { return m_zoneScript; }
 
         public void AddToNotify(NotifyFlags f) { m_notifyflags |= f; }
-        public bool isNeedNotify(NotifyFlags f) { return Convert.ToBoolean(m_notifyflags & f); }
+        public bool IsNeedNotify(NotifyFlags f) { return Convert.ToBoolean(m_notifyflags & f); }
         NotifyFlags GetNotifyFlags() { return m_notifyflags; }
         bool NotifyExecuted(NotifyFlags f) { return Convert.ToBoolean(m_executed_notifies & f); }
         void SetNotified(NotifyFlags f) { m_executed_notifies |= f; }
         public void ResetAllNotifies() { m_notifyflags = 0; m_executed_notifies = 0; }
 
-        public bool isActiveObject() { return m_isActive; }
+        public bool IsActiveObject() { return m_isActive; }
         public bool IsPermanentWorldObject() { return m_isWorldObject; }
 
         public Transport GetTransport() { return m_transport; }
@@ -1907,7 +1903,7 @@ namespace Game.Entities
                 else
                     GetHitSpherePointFor(new Position(ox, oy, oz), out x, out y, out z);
 
-                return GetMap().isInLineOfSight(GetPhaseShift(), x, y, z + 2.0f, ox, oy, oz + 2.0f, ignoreFlags);
+                return GetMap().IsInLineOfSight(GetPhaseShift(), x, y, z + 2.0f, ox, oy, oz + 2.0f, ignoreFlags);
             }
 
             return true;
@@ -1996,12 +1992,12 @@ namespace Game.Entities
             return (size * size) >= GetExactDist2dSq(pos1.GetPositionX() + (float)Math.Cos(angle) * dist, pos1.GetPositionY() + (float)Math.Sin(angle) * dist);
         }
 
-        public bool isInFront(WorldObject target, float arc = MathFunctions.PI)
+        public bool IsInFront(WorldObject target, float arc = MathFunctions.PI)
         {
             return HasInArc(arc, target);
         }
 
-        public bool isInBack(WorldObject target, float arc = MathFunctions.PI)
+        public bool IsInBack(WorldObject target, float arc = MathFunctions.PI)
         {
             return !HasInArc(2 * MathFunctions.PI - arc, target);
         }
@@ -2246,7 +2242,7 @@ namespace Game.Entities
                         return z;
                 }
                 LiquidData liquid_status;
-                ZLiquidStatus res = obj.GetMap().getLiquidStatus(obj.GetPhaseShift(), x, y, z, MapConst.MapAllLiquidTypes, out liquid_status);
+                ZLiquidStatus res = obj.GetMap().GetLiquidStatus(obj.GetPhaseShift(), x, y, z, MapConst.MapAllLiquidTypes, out liquid_status);
                 if (res != 0 && liquid_status.level > helper) // water must be above ground
                 {
                     if (liquid_status.level > z) // z is underwater
@@ -2272,7 +2268,7 @@ namespace Game.Entities
             }
 
             float destz = NormalizeZforCollision(this, destx, desty, pos.GetPositionZ());
-            bool col = Global.VMapMgr.getObjectHitPos(PhasingHandler.GetTerrainMapId(GetPhaseShift(), GetMap(), pos.posX, pos.posY), pos.posX, pos.posY, pos.posZ + 0.5f, destx, desty, destz + 0.5f, out destx, out desty, out destz, -0.5f);
+            bool col = Global.VMapMgr.GetObjectHitPos(PhasingHandler.GetTerrainMapId(GetPhaseShift(), GetMap(), pos.posX, pos.posY), pos.posX, pos.posY, pos.posZ + 0.5f, destx, desty, destz + 0.5f, out destx, out desty, out destz, -0.5f);
 
             // collision occured
             if (col)
@@ -2284,7 +2280,7 @@ namespace Game.Entities
             }
 
             // check dynamic collision
-            col = GetMap().getObjectHitPos(GetPhaseShift(), pos.posX, pos.posY, pos.posZ + 0.5f, destx, desty, destz + 0.5f, out destx, out desty, out destz, -0.5f);
+            col = GetMap().GetObjectHitPos(GetPhaseShift(), pos.posX, pos.posY, pos.posZ + 0.5f, destx, desty, destz + 0.5f, out destx, out desty, out destz, -0.5f);
 
             // Collided with a gameobject
             if (col)
@@ -2322,8 +2318,8 @@ namespace Game.Entities
         public void SetLocationInstanceId(uint _instanceId) { instanceId = _instanceId; }
 
         #region Fields
-        public TypeMask objectTypeMask { get; set; }
-        protected TypeId objectTypeId { get; set; }
+        public TypeMask ObjectTypeMask { get; set; }
+        protected TypeId ObjectTypeId { get; set; }
         protected CreateObjectBits m_updateFlag;
         ObjectGuid m_guid;
 
@@ -2370,11 +2366,21 @@ namespace Game.Entities
 
     public class MovementInfo
     {
+        public ObjectGuid Guid { get; set; }
+        MovementFlag flags;
+        MovementFlag2 flags2;
+        public Position Pos { get; set; }
+        public uint Time { get; set; }
+        public TransportInfo transport;
+        public float Pitch { get; set; }
+        public JumpInfo jump;
+        public float SplineElevation { get; set; }
+
         public MovementInfo()
         {
             Guid = ObjectGuid.Empty;
-            Flags = MovementFlag.None;
-            Flags2 = MovementFlag2.None;
+            flags = MovementFlag.None;
+            flags2 = MovementFlag2.None;
             Time = 0;
             Pitch = 0.0f;
 
@@ -2383,17 +2389,17 @@ namespace Game.Entities
             jump.Reset();
         }
 
-        public MovementFlag GetMovementFlags() { return Flags; }
-        public void SetMovementFlags(MovementFlag f) { Flags = f; }
-        public void AddMovementFlag(MovementFlag f) { Flags |= f; }
-        public void RemoveMovementFlag(MovementFlag f) { Flags &= ~f; }
-        public bool HasMovementFlag(MovementFlag f) { return Convert.ToBoolean(Flags & f); }
+        public MovementFlag GetMovementFlags() { return flags; }
+        public void SetMovementFlags(MovementFlag f) { flags = f; }
+        public void AddMovementFlag(MovementFlag f) { flags |= f; }
+        public void RemoveMovementFlag(MovementFlag f) { flags &= ~f; }
+        public bool HasMovementFlag(MovementFlag f) { return Convert.ToBoolean(flags & f); }
 
-        public MovementFlag2 GetMovementFlags2() { return Flags2; }
-        public void SetMovementFlags2(MovementFlag2 f) { Flags2 = f; }
-        public void AddMovementFlag2(MovementFlag2 f) { Flags2 |= f; }
-        public void RemoveMovementFlag2(MovementFlag2 f) { Flags2 &= ~f; }
-        public bool HasMovementFlag2(MovementFlag2 f) { return Convert.ToBoolean(Flags2 & f); }
+        public MovementFlag2 GetMovementFlags2() { return flags2; }
+        public void SetMovementFlags2(MovementFlag2 f) { flags2 = f; }
+        public void AddMovementFlag2(MovementFlag2 f) { flags2 |= f; }
+        public void RemoveMovementFlag2(MovementFlag2 f) { flags2 &= ~f; }
+        public bool HasMovementFlag2(MovementFlag2 f) { return Convert.ToBoolean(flags2 & f); }
 
         public void SetFallTime(uint time) { jump.fallTime = time; }
 
@@ -2407,15 +2413,7 @@ namespace Game.Entities
             jump.Reset();
         }
 
-        public ObjectGuid Guid { get; set; }
-        MovementFlag Flags { get; set; }
-        MovementFlag2 Flags2 { get; set; }
-        public Position Pos { get; set; }
-        public uint Time { get; set; }
-        public TransportInfo transport;
-        public float Pitch { get; set; }
-        public JumpInfo jump;
-        public float SplineElevation { get; set; }
+
 
         public struct TransportInfo
         {
@@ -2449,6 +2447,74 @@ namespace Game.Entities
             public float sinAngle;
             public float cosAngle;
             public float xyspeed;
+        }
+    }
+
+    public class MovementForce
+    {
+        public ObjectGuid ID;
+        public Vector3 Origin;
+        public Vector3 Direction;
+        public uint TransportID;
+        public float Magnitude;
+        public byte Type;
+
+        public void Read(WorldPacket data)
+        {
+            ID = data.ReadPackedGuid();
+            Origin = data.ReadVector3();
+            Direction = data.ReadVector3();
+            TransportID = data.ReadUInt32();
+            Magnitude = data.ReadFloat();
+            Type = data.ReadBits<byte>(2);
+            
+        }
+
+        public void Write(WorldPacket data)
+        {
+            MovementExtensions.WriteMovementForceWithDirection(this, data);
+        }
+    }
+
+    public class MovementForces
+    {
+        List<MovementForce> _forces = new List<MovementForce>();
+        float _modMagnitude = 1.0f;
+
+        public List<MovementForce> GetForces() { return _forces; }
+
+        public bool Add(MovementForce newForce)
+        {
+            var movementForce = FindMovementForce(newForce.ID);
+            if (movementForce == null)
+            {
+                _forces.Add(newForce);
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool Remove(ObjectGuid id)
+        {
+            var movementForce = FindMovementForce(id);
+            if (movementForce != null)
+            {
+                _forces.Remove(movementForce);
+                return true;
+            }
+
+            return false;
+        }
+
+        public float GetModMagnitude() { return _modMagnitude; }
+        public void SetModMagnitude(float modMagnitude) { _modMagnitude = modMagnitude; }
+
+        public bool IsEmpty() { return _forces.Empty() && _modMagnitude == 1.0f; }
+
+        MovementForce FindMovementForce(ObjectGuid id)
+        {
+            return _forces.Find(force => force.ID == id);
         }
     }
 

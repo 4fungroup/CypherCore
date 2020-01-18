@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,6 @@
  */
 
 using Framework.Constants;
-using System;
 
 namespace Game.DataStorage
 {
@@ -99,6 +98,5 @@ namespace Game.DataStorage
             return EnemyGroup == 0 && FriendGroup == 0;
         }
         public bool IsContestedGuardFaction() { return (Flags & (ushort)FactionTemplateFlags.ContestedGuard) != 0; }
-        public bool ShouldSparAttack() { return (Flags & (ushort)FactionTemplateFlags.EnemySpar) != 0; }
     }
 }

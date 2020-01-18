@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -950,7 +950,7 @@ namespace Scripts.World.NpcSpecial
                                 {
                                     Creature patient = ObjectAccessor.GetCreature(me, guid);
                                     if (patient)
-                                        patient.setDeathState(DeathState.JustDied);
+                                        patient.SetDeathState(DeathState.JustDied);
                                 }
                             }
 
@@ -1156,7 +1156,7 @@ namespace Scripts.World.NpcSpecial
             {
                 me.RemoveUnitFlag(UnitFlags.InCombat);
                 me.AddUnitFlag(UnitFlags.NotSelectable);
-                me.setDeathState(DeathState.JustDied);
+                me.SetDeathState(DeathState.JustDied);
                 me.AddDynamicFlag(UnitDynFlags.Dead);
 
                 if (!DoctorGUID.IsEmpty())
@@ -1170,7 +1170,7 @@ namespace Scripts.World.NpcSpecial
     }
 
     [Script]
-    class npc_garments_of_quests : npc_escortAI
+    class npc_garments_of_quests : NpcEscortAI
     {
         public npc_garments_of_quests(Creature creature) : base(creature)
         {
@@ -1320,10 +1320,10 @@ namespace Scripts.World.NpcSpecial
             if (!UpdateVictim())
                 return;
 
-            if (me.isAttackReady())
+            if (me.IsAttackReady())
             {
                 DoCastVictim(Spells.Deathtouch, true);
-                me.resetAttackTimer();
+                me.ResetAttackTimer();
             }
         }
     }
@@ -1501,7 +1501,7 @@ namespace Scripts.World.NpcSpecial
             if (ExplosionTimer <= diff)
             {
                 DoCast(me, Spells.TonkMineDetonate, true);
-                me.setDeathState(DeathState.Dead); // unsummon it
+                me.SetDeathState(DeathState.Dead); // unsummon it
             }
             else
                 ExplosionTimer -= diff;
@@ -1582,7 +1582,7 @@ namespace Scripts.World.NpcSpecial
                             {
                                 Unit unit = Global.ObjAccessor.GetUnit(me, pair.Key);
                                 if (unit)
-                                    unit.getHostileRefManager().deleteReference(me);
+                                    unit.GetHostileRefManager().DeleteReference(me);
 
                                 _damageTimes.Remove(pair.Key);
                             }
@@ -2222,7 +2222,7 @@ namespace Scripts.World.NpcSpecial
             });
         }
 
-        public override void sGossipSelect(Player player, uint menuId, uint gossipListId)
+        public override void GossipSelect(Player player, uint menuId, uint gossipListId)
         {
             switch (gossipListId)
             {

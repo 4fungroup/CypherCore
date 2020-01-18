@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,6 +78,7 @@ namespace Game.Spells
                 RangeIndex = _misc.RangeIndex;
                 RangeEntry = CliDB.SpellRangeStorage.LookupByKey(_misc.RangeIndex);
                 Speed = _misc.Speed;
+                LaunchDelay = _misc.LaunchDelay;
                 SchoolMask = (SpellSchoolMask)_misc.SchoolMask;
                 AttributesCu = 0;
 
@@ -636,6 +637,11 @@ namespace Game.Spells
             return !(HasAttribute(SpellAttr1.NoThreat) || HasAttribute(SpellAttr3.NoInitialAggro));
         }
 
+        public bool HasHitDelay()
+        {
+            return Speed > 0.0f || LaunchDelay > 0.0f;
+        }
+
         public WeaponAttackType GetAttackType()
         {
             WeaponAttackType result;
@@ -1077,7 +1083,7 @@ namespace Game.Spells
                         {
                             Creature targetCreature = unitTarget.ToCreature();
                             if (targetCreature != null)
-                                if (targetCreature.hasLootRecipient() && !targetCreature.isTappedBy(caster.ToPlayer()))
+                                if (targetCreature.HasLootRecipient() && !targetCreature.IsTappedBy(caster.ToPlayer()))
                                     return SpellCastResult.CantCastOnTapped;
                         }
 
@@ -1653,10 +1659,10 @@ namespace Game.Spells
         public void _LoadSpellDiminishInfo()
         {
             SpellDiminishInfo diminishInfo = new SpellDiminishInfo();
-            diminishInfo.DiminishGroup = diminishingGroupCompute();
-            diminishInfo.DiminishReturnType = diminishingTypeCompute(diminishInfo.DiminishGroup);
-            diminishInfo.DiminishMaxLevel = diminishingMaxLevelCompute(diminishInfo.DiminishGroup);
-            diminishInfo.DiminishDurationLimit = diminishingLimitDurationCompute();
+            diminishInfo.DiminishGroup = DiminishingGroupCompute();
+            diminishInfo.DiminishReturnType = DiminishingTypeCompute(diminishInfo.DiminishGroup);
+            diminishInfo.DiminishMaxLevel = DiminishingMaxLevelCompute(diminishInfo.DiminishGroup);
+            diminishInfo.DiminishDurationLimit = DiminishingLimitDurationCompute();
 
             _diminishInfo = diminishInfo;
         }
@@ -1681,7 +1687,7 @@ namespace Game.Spells
             return _diminishInfo.DiminishDurationLimit;
         }
 
-        DiminishingGroup diminishingGroupCompute()
+        DiminishingGroup DiminishingGroupCompute()
         {
             if (IsPositive())
                 return DiminishingGroup.None;
@@ -2036,7 +2042,7 @@ namespace Game.Spells
             return DiminishingGroup.None;
         }
 
-        DiminishingReturnsType diminishingTypeCompute(DiminishingGroup group)
+        DiminishingReturnsType DiminishingTypeCompute(DiminishingGroup group)
         {
             switch (group)
             {
@@ -2051,7 +2057,7 @@ namespace Game.Spells
             }
         }
 
-        DiminishingLevels diminishingMaxLevelCompute(DiminishingGroup group)
+        DiminishingLevels DiminishingMaxLevelCompute(DiminishingGroup group)
         {
             switch (group)
             {
@@ -2064,7 +2070,7 @@ namespace Game.Spells
             }
         }
 
-        int diminishingLimitDurationCompute()
+        int DiminishingLimitDurationCompute()
         {
             // Explicit diminishing duration
             switch (SpellFamilyName)
@@ -2675,7 +2681,7 @@ namespace Game.Spells
             int castTime = 0;
             if (CastTimeEntry != null)
             {
-                int calcLevel = spell != null ? (int)spell.GetCaster().getLevel() : 0;
+                int calcLevel = spell != null ? (int)spell.GetCaster().GetLevel() : 0;
                 if (MaxLevel != 0 && calcLevel > MaxLevel)
                     calcLevel = (int)MaxLevel;
 
@@ -2867,7 +2873,7 @@ namespace Game.Spells
                         if (HasAttribute(SpellAttr0.LevelDamageCalculation))
                         {
                             GtNpcManaCostScalerRecord spellScaler = CliDB.NpcManaCostScalerGameTable.GetRow(SpellLevel);
-                            GtNpcManaCostScalerRecord casterScaler = CliDB.NpcManaCostScalerGameTable.GetRow(caster.getLevel());
+                            GtNpcManaCostScalerRecord casterScaler = CliDB.NpcManaCostScalerGameTable.GetRow(caster.GetLevel());
                             if (spellScaler != null && casterScaler != null)
                                 powerCost *= (int)(casterScaler.Scaler / spellScaler.Scaler);
                         }
@@ -3017,7 +3023,7 @@ namespace Game.Spells
                         }
                     case SpellProcsPerMinuteModType.Class:
                         {
-                            if (caster.getClassMask().HasAnyFlag(mod.Param))
+                            if (caster.GetClassMask().HasAnyFlag(mod.Param))
                                 ppm *= 1.0f + mod.Coeff;
                             break;
                         }
@@ -3031,7 +3037,7 @@ namespace Game.Spells
                         }
                     case SpellProcsPerMinuteModType.Race:
                         {
-                            if (caster.getRaceMask().HasAnyFlag(mod.Param))
+                            if (caster.GetRaceMask().HasAnyFlag(mod.Param))
                                 ppm *= 1.0f + mod.Coeff;
                             break;
                         }
@@ -3372,7 +3378,7 @@ namespace Game.Spells
                                                             continue;
                                                         // if non-positive trigger cast targeted to positive target this main cast is non-positive
                                                         // this will place this spell auras as debuffs
-                                                        if (_IsPositiveTarget(eff.TargetA.getTarget(), eff.TargetB.getTarget()) && !spellTriggeredProto._IsPositiveEffect(eff.EffectIndex, true))
+                                                        if (_IsPositiveTarget(eff.TargetA.GetTarget(), eff.TargetB.GetTarget()) && !spellTriggeredProto._IsPositiveEffect(eff.EffectIndex, true))
                                                             return false;
                                                     }
                                                 }
@@ -3477,7 +3483,7 @@ namespace Game.Spells
 
 
                     // non-positive targets
-                    if (!_IsPositiveTarget(effect.TargetA.getTarget(), effect.TargetB.getTarget()))
+                    if (!_IsPositiveTarget(effect.TargetA.GetTarget(), effect.TargetB.GetTarget()))
                         return false;
 
                     // negative spell if triggered spell is negative
@@ -3504,10 +3510,10 @@ namespace Game.Spells
             return true;
         }
 
-        bool _IsPositiveTarget(uint targetA, uint targetB)
+        bool _IsPositiveTarget(Targets targetA, Targets targetB)
         {
             // non-positive targets
-            switch ((Targets)targetA)
+            switch (targetA)
             {
                 case Targets.UnitNearbyEnemy:
                 case Targets.UnitEnemy:
@@ -3648,6 +3654,30 @@ namespace Game.Spells
             return null;
         }
 
+        public bool HasTargetType(Targets target)
+        {
+            foreach (var pair in _effects)
+            {
+                foreach (SpellEffectInfo effect in pair.Value)
+                {
+                    if (effect != null && (effect.TargetA.GetTarget() == target || effect.TargetB.GetTarget() == target))
+                        return true;
+                }
+            }
+            return false;
+        }
+
+        public bool HasTargetType(Difficulty difficulty, Targets target)
+        {
+            var effects = GetEffectsForDifficulty(difficulty);
+            foreach (SpellEffectInfo effect in effects)
+            {
+                if (effect != null && (effect.TargetA.GetTarget() == target || effect.TargetB.GetTarget() == target))
+                    return true;
+            }
+            return false;
+        }
+
         public bool HasAttribute(SpellAttr0 attribute) { return Convert.ToBoolean(Attributes & attribute); }
         public bool HasAttribute(SpellAttr1 attribute) { return Convert.ToBoolean(AttributesEx & attribute); }
         public bool HasAttribute(SpellAttr2 attribute) { return Convert.ToBoolean(AttributesEx2 & attribute); }
@@ -3727,6 +3757,7 @@ namespace Game.Spells
         public uint RangeIndex { get; set; }
         public SpellRangeRecord RangeEntry { get; set; }
         public float Speed { get; set; }
+        public float LaunchDelay { get; set; }
         public uint StackAmount { get; set; }
         public uint[] Totem = new uint[SpellConst.MaxTotems];
         public int[] Reagent = new int[SpellConst.MaxReagents];
@@ -3874,18 +3905,18 @@ namespace Game.Spells
             return IsAreaAuraEffect() || Effect == SpellEffectName.ApplyAura;
         }
 
-        public int CalcValue(Unit caster = null, int? bp = null, Unit target = null, int itemLevel = -1)
+        public int CalcValue(Unit caster = null, int? bp = null, Unit target = null, uint castItemId = 0, int itemLevel = -1)
         {
             float throwAway;
-            return CalcValue(out throwAway, caster, bp, target, itemLevel);
+            return CalcValue(out throwAway, caster, bp, target, castItemId, itemLevel);
         }
 
-        public int CalcValue(out float variance, Unit caster = null, int? bp = null, Unit target = null, int itemLevel = -1)
+        public int CalcValue(out float variance, Unit caster = null, int? bp = null, Unit target = null, uint castItemId = 0, int itemLevel = -1)
         {
             variance = 0.0f;
             float basePointsPerLevel = RealPointsPerLevel;
             // TODO: this needs to be a float, not rounded
-            int basePoints = CalcBaseValue(caster, target, itemLevel);
+            int basePoints = CalcBaseValue(caster, target, castItemId, itemLevel);
             float value = bp.HasValue ? bp.Value : BasePoints;
             float comboDamage = PointsPerResource;
 
@@ -3907,7 +3938,7 @@ namespace Game.Spells
             {
                 if (GetScalingExpectedStat() == ExpectedStatType.None)
                 {
-                    int level = caster ? (int)caster.getLevel() : 0;
+                    int level = caster ? (int)caster.GetLevel() : 0;
                     if (level > (int)_spellInfo.MaxLevel && _spellInfo.MaxLevel > 0)
                         level = (int)_spellInfo.MaxLevel;
                     level -= (int)_spellInfo.BaseLevel;
@@ -3933,15 +3964,15 @@ namespace Game.Spells
             return (int)Math.Round(value);
         }
 
-        public int CalcBaseValue(Unit caster, Unit target, int itemLevel)
+        public int CalcBaseValue(Unit caster, Unit target, uint itemId, int itemLevel)
         {
             if (Scaling.Coefficient != 0.0f)
             {
                 uint level = _spellInfo.SpellLevel;
                 if (target && _spellInfo.IsPositiveEffect(EffectIndex) && (Effect == SpellEffectName.ApplyAura))
-                    level = target.getLevel();
+                    level = target.GetLevel();
                 else if (caster)
-                    level = caster.getLevel();
+                    level = caster.GetLevel();
 
                 if (_spellInfo.BaseLevel != 0 && !_spellInfo.HasAttribute(SpellAttr11.ScalesWithItemLevel) && _spellInfo.HasAttribute(SpellAttr10.UseSpellBaseLevelForScaling))
                     level = _spellInfo.BaseLevel;
@@ -3980,10 +4011,34 @@ namespace Game.Spells
 
                     if (_spellInfo.Scaling._Class == -7)
                     {
-                        // todo: get inventorytype here
-                        GtCombatRatingsMultByILvlRecord ratingMult = CliDB.CombatRatingsMultByILvlGameTable.GetRow(effectiveItemLevel);
+                        GtGenericMultByILvlRecord ratingMult = CliDB.CombatRatingsMultByILvlGameTable.GetRow(effectiveItemLevel);
                         if (ratingMult != null)
-                            tempValue *= ratingMult.ArmorMultiplier;
+                        {
+                            ItemSparseRecord itemSparse = CliDB.ItemSparseStorage.LookupByKey(itemId);
+                            if (itemSparse != null)
+                                tempValue *= CliDB.GetIlvlStatMultiplier(ratingMult, itemSparse.inventoryType);
+                        }
+                    }
+
+                    if (IsAura(AuraType.ModRating))
+                    {
+                        GtGenericMultByILvlRecord ratingMult = CliDB.CombatRatingsMultByILvlGameTable.GetRow(effectiveItemLevel);
+                        if (ratingMult != null)
+                        {
+                            ItemSparseRecord itemSparse = CliDB.ItemSparseStorage.LookupByKey(itemId);
+                            if (itemSparse != null)
+                                tempValue *= CliDB.GetIlvlStatMultiplier(ratingMult, itemSparse.inventoryType);
+                        }
+                        else if (IsAura(AuraType.ModStat) && MiscValue == (int)Stats.Stamina)
+                        {
+                            GtGenericMultByILvlRecord staminaMult = CliDB.StaminaMultByILvlGameTable.GetRow(effectiveItemLevel);
+                            if (staminaMult != null)
+                            {
+                                ItemSparseRecord itemSparse = CliDB.ItemSparseStorage.LookupByKey(itemId);
+                                if (itemSparse != null)
+                                    tempValue *= CliDB.GetIlvlStatMultiplier(staminaMult, itemSparse.inventoryType);
+                            }
+                        }
                     }
                 }
 
@@ -4009,7 +4064,7 @@ namespace Game.Spells
                     if (contentTuning != null)
                         expansion = contentTuning.ExpansionID;
 
-                    uint level = caster ? caster.getLevel() : 1;
+                    uint level = caster ? caster.GetLevel() : 1;
                     tempValue = Global.DB2Mgr.EvaluateExpectedStat(stat, level, expansion, 0, Class.None) * BasePoints / 100.0f;
                 }
 
@@ -4062,7 +4117,7 @@ namespace Game.Spells
 
             if (caster != null)
             {
-                radius += entry.RadiusPerLevel * caster.getLevel();
+                radius += entry.RadiusPerLevel * caster.GetLevel();
                 radius = Math.Min(radius, entry.RadiusMax);
                 Player modOwner = caster.GetSpellModOwner();
                 if (modOwner != null)
@@ -4141,6 +4196,7 @@ namespace Game.Spells
                 case SpellEffectName.ApplyAreaAuraOwner:
                 case SpellEffectName.ApllyAuraOnPet:
                 case SpellEffectName.Unk202:
+                case SpellEffectName.ApplyAreaAuraPartyNonrandom:
                     switch (ApplyAuraName)
                     {
                         case AuraType.PeriodicDamage:
@@ -4598,10 +4654,6 @@ namespace Game.Spells
         public Targets GetTarget()
         {
             return _target;
-        }
-        public uint getTarget()
-        {
-            return (uint)_target;
         }
 
         public SpellCastTargetFlags GetExplicitTargetMask(bool srcSet, bool dstSet)

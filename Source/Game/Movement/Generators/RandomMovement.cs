@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,7 +75,7 @@ namespace Game.Movement
                 return true;
             }
 
-            if (creature.moveSpline.Finalized())
+            if (creature.MoveSpline.Finalized())
             {
                 i_nextMoveTime.Update((int)diff);
                 if (i_nextMoveTime.Passed())
@@ -167,7 +167,7 @@ namespace Game.Movement
             init.Launch();
 
             //Call for creature group update
-            if (creature.GetFormation() != null && creature.GetFormation().getLeader() == creature)
+            if (creature.GetFormation() != null && creature.GetFormation().GetLeader() == creature)
                 creature.GetFormation().LeaderMoveTo(destX, destY, destZ);
         }
 

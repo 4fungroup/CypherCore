@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -316,34 +316,35 @@ namespace Game.AI
 
         void CheckConditions(uint diff)
         {
-            if (m_ConditionsTimer < diff)
+            if (!m_HasConditions)
+                return;
+
+            if (m_ConditionsTimer <= diff)
             {
-                if (m_HasConditions)
+                Vehicle vehicleKit = me.GetVehicleKit();
+                if (vehicleKit)
                 {
-                    Vehicle vehicleKit = me.GetVehicleKit();
-                    if (vehicleKit)
+                    foreach (var pair in vehicleKit.Seats)
                     {
-                        foreach (var pair in vehicleKit.Seats)
+                        Unit passenger = Global.ObjAccessor.GetUnit(me, pair.Value.Passenger.Guid);
+                        if (passenger)
                         {
-                            Unit passenger = Global.ObjAccessor.GetUnit(me, pair.Value.Passenger.Guid);
-                            if (passenger)
+                            Player player = passenger.ToPlayer();
+                            if (player)
                             {
-                                Player player = passenger.ToPlayer();
-                                if (player)
+                                if (!Global.ConditionMgr.IsObjectMeetingNotGroupedConditions(ConditionSourceType.CreatureTemplateVehicle, me.GetEntry(), player, me))
                                 {
-                                    if (!Global.ConditionMgr.IsObjectMeetingNotGroupedConditions(ConditionSourceType.CreatureTemplateVehicle, me.GetEntry(), player, me))
-                                    {
-                                        player.ExitVehicle();
-                                        return;//check other pessanger in next tick
-                                    }
+                                    player.ExitVehicle();
+                                    return;//check other pessanger in next tick
                                 }
                             }
                         }
                     }
                 }
+
                 m_ConditionsTimer = VEHICLE_CONDITION_CHECK_TIME;
             }
-            else 
+            else
                 m_ConditionsTimer -= diff;
         }
 

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ using Game.Network.Packets;
 using Game.Spells;
 using System;
 using System.Collections.Generic;
-using Game;
 using Framework.Dynamic;
 using Game.Network;
 
@@ -37,8 +36,8 @@ namespace Game.Entities
             _previousCheckOrientation = float.PositiveInfinity;
             _reachedDestination = true;
 
-            objectTypeMask |= TypeMask.AreaTrigger;
-            objectTypeId = TypeId.AreaTrigger;
+            ObjectTypeMask |= TypeMask.AreaTrigger;
+            ObjectTypeId = TypeId.AreaTrigger;
 
             m_updateFlag.Stationary = true;
             m_updateFlag.AreaTrigger = true;
@@ -79,7 +78,7 @@ namespace Game.Entities
             }
         }
 
-        public static AreaTrigger CreateAreaTrigger(uint spellMiscId, Unit caster, Unit target, SpellInfo spell, Position pos, int duration, uint spellXSpellVisualId, ObjectGuid castId = default(ObjectGuid), AuraEffect aurEff = null)
+        public static AreaTrigger CreateAreaTrigger(uint spellMiscId, Unit caster, Unit target, SpellInfo spell, Position pos, int duration, uint spellXSpellVisualId, ObjectGuid castId = default, AuraEffect aurEff = null)
         {
             AreaTrigger at = new AreaTrigger();
             if (!at.Create(spellMiscId, caster, target, spell, pos, duration, spellXSpellVisualId, castId, aurEff))
@@ -315,12 +314,9 @@ namespace Game.Entities
 
             unsafe
             {
-                fixed (float* ptr = GetTemplate().BoxDatas.Extents)
-                {
-                    extentsX = ptr[0];
-                    extentsY = ptr[1];
-                    extentsZ = ptr[2];
-                }
+                extentsX = GetTemplate().BoxDatas.Extents[0];
+                extentsY = GetTemplate().BoxDatas.Extents[1];
+                extentsZ = GetTemplate().BoxDatas.Extents[2];
             }
 
             var check = new AnyUnitInObjectRangeCheck(this, GetTemplate().MaxSearchRadius, false);
@@ -393,7 +389,7 @@ namespace Game.Entities
             {
                 Player player = unit.ToPlayer();
                 if (player)
-                    if (player.isDebugAreaTriggers)
+                    if (player.IsDebugAreaTriggers)
                         player.SendSysMessage(CypherStrings.DebugAreatriggerEntered, GetTemplate().Id);
 
                 DoActions(unit);
@@ -408,7 +404,7 @@ namespace Game.Entities
                 {
                     Player player = leavingUnit.ToPlayer();
                     if (player)
-                        if (player.isDebugAreaTriggers)
+                        if (player.IsDebugAreaTriggers)
                             player.SendSysMessage(CypherStrings.DebugAreatriggerLeft, GetTemplate().Id);
 
                     UndoActions(leavingUnit);
@@ -633,8 +629,8 @@ namespace Game.Entities
 
             _movementTime = 0;
 
-            _spline.Init_Spline(splinePoints.ToArray(), splinePoints.Count, Spline.EvaluationMode.Linear);
-            _spline.initLengths();
+            _spline.InitSpline(splinePoints.ToArray(), splinePoints.Count, Spline.EvaluationMode.Linear);
+            _spline.InitLengths();
 
             // should be sent in object create packets only
             SetUpdateFieldValue(m_values.ModifyValue(m_areaTriggerData).ModifyValue(m_areaTriggerData.TimeToTarget), timeToTarget);
@@ -772,9 +768,9 @@ namespace Game.Entities
             if (_movementTime >= GetTimeToTarget())
             {
                 _reachedDestination = true;
-                _lastSplineIndex = _spline.last();
+                _lastSplineIndex = _spline.Last();
 
-                Vector3 lastSplinePosition = _spline.getPoint(_lastSplineIndex);
+                Vector3 lastSplinePosition = _spline.GetPoint(_lastSplineIndex);
                 GetMap().AreaTriggerRelocation(this, lastSplinePosition.X, lastSplinePosition.Y, lastSplinePosition.Z, GetOrientation());
 
                 DebugVisualizePosition();
@@ -803,7 +799,7 @@ namespace Game.Entities
 
             int lastPositionIndex = 0;
             float percentFromLastPoint = 0;
-            _spline.computeIndex(currentTimePercent, ref lastPositionIndex, ref percentFromLastPoint);
+            _spline.ComputeIndex(currentTimePercent, ref lastPositionIndex, ref percentFromLastPoint);
 
             Vector3 currentPosition;
             _spline.Evaluate_Percent(lastPositionIndex, percentFromLastPoint, out currentPosition);
@@ -811,7 +807,7 @@ namespace Game.Entities
             float orientation = GetOrientation();
             if (GetTemplate().HasFlag(AreaTriggerFlags.HasFaceMovementDir))
             {
-                Vector3 nextPoint = _spline.getPoint(lastPositionIndex + 1);
+                Vector3 nextPoint = _spline.GetPoint(lastPositionIndex + 1);
                 orientation = GetAngle(nextPoint.X, nextPoint.Y);
             }
 
@@ -887,7 +883,7 @@ namespace Game.Entities
             {
                 Player player = caster.ToPlayer();
                 if (player)
-                    if (player.isDebugAreaTriggers)
+                    if (player.IsDebugAreaTriggers)
                         player.SummonCreature(1, this, TempSummonType.TimedDespawn, GetTimeToTarget());
             }
         }
@@ -912,7 +908,7 @@ namespace Game.Entities
         public Vector3 GetRollPitchYaw() { return _rollPitchYaw; }
         public Vector3 GetTargetRollPitchYaw() { return _targetRollPitchYaw; }
 
-        public bool HasSplines() { return !_spline.empty(); }
+        public bool HasSplines() { return !_spline.Empty(); }
         public Spline GetSpline() { return _spline; }
         public uint GetElapsedTimeForMovement() { return GetTimeSinceCreated(); } // @todo: research the right value, in sniffs both timers are nearly identical
 

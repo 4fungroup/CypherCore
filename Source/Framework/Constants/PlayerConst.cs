@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,6 +64,13 @@ namespace Framework.Constants
         public const int MaxHonorLevel = 500;
         public const byte LevelMinHonor = 110;
         public const uint SpellPvpRulesEnabled = 134735;
+
+        //Azerite
+        public const uint ItemIdHeartOfAzeroth = 158075;
+        public const uint MaxAzeriteItemLevel = 70;
+        public const uint MaxAzeriteItemKnowledgeLevel = 30;
+        public const uint PlayerConditionIdUnlockedAzeriteEssences = 69048;
+        public const uint SpellIdHeartEssenceActionBarOverride = 298554;
     }
 
     public struct MoneyConstants
@@ -375,8 +382,8 @@ namespace Framework.Constants
         Unk7 = 0x80,
         ContestedPVP = 0x100,
         InPVP = 0x200,
-        HideHelm = 0x400,
-        HideCloak = 0x800,
+        WarModeActive = 0x400,
+        WarModeDesired = 0x800,
         PlayedLongTime = 0x1000,
         PlayedTooLong = 0x2000,
         IsOutOfBounds = 0x4000,
@@ -733,10 +740,21 @@ namespace Framework.Constants
         FailedRestArea = 8
     }
 
-    public enum TutorialsFlag 
+    public enum TutorialsFlag
     {
         None = 0x00,
         Changed = 0x01,
         LoadedFromDB = 0x02
+    }
+
+    public enum ItemSearchLocation
+    {
+        InEquipment = 0x01,
+        InInventory = 0x02,
+        InBank = 0x04,
+        InReagentBank = 0x08,
+
+        Default = InEquipment | InInventory,
+        Everywhere = InEquipment | InInventory | InBank | InReagentBank
     }
 }

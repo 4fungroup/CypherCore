@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -511,7 +511,7 @@ namespace Scripts.Northrend.AzjolNerub.AzjolNerub.Anubarak
 
             if (diff >= _backstabTimer)
             {
-                if (me.GetVictim() && me.GetVictim().isInBack(me))
+                if (me.GetVictim() && me.GetVictim().IsInBack(me))
                     DoCastVictim(SpellIds.Backstab);
                 _backstabTimer = 6 * Time.InMilliseconds;
             }

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,7 +138,7 @@ namespace Game.Entities
             _me.ApplySpellImmune(0, SpellImmunity.Effect, SpellEffectName.KnockBackDest, true);
 
             // Mechanical units & vehicles ( which are not Bosses, they have own immunities in DB ) should be also immune on healing ( exceptions in switch below )
-            if (_me.IsTypeId(TypeId.Unit) && _me.ToCreature().GetCreatureTemplate().CreatureType == CreatureType.Mechanical && !_me.ToCreature().isWorldBoss())
+            if (_me.IsTypeId(TypeId.Unit) && _me.ToCreature().GetCreatureTemplate().CreatureType == CreatureType.Mechanical && !_me.ToCreature().IsWorldBoss())
             {
                 // Heal & dispel ...
                 _me.ApplySpellImmune(0, SpellImmunity.Effect, SpellEffectName.Heal, true);

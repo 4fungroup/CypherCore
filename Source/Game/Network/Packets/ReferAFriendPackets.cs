@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,42 +21,6 @@ using System;
 
 namespace Game.Network.Packets
 {
-    public class AcceptLevelGrant : ClientPacket
-    {
-        public AcceptLevelGrant(WorldPacket packet) : base(packet) { }
-
-        public override void Read()
-        {
-            Granter = _worldPacket.ReadPackedGuid();
-        }
-
-        public ObjectGuid Granter;
-    }
-
-    public class GrantLevel : ClientPacket
-    {
-        public GrantLevel(WorldPacket packet) : base(packet) { }
-
-        public override void Read()
-        {
-            Target = _worldPacket.ReadPackedGuid();
-        }
-
-        public ObjectGuid Target;
-    }
-
-    public class ProposeLevelGrant : ServerPacket
-    {
-        public ProposeLevelGrant() : base(ServerOpcodes.ProposeLevelGrant) { }
-
-        public override void Write()
-        {
-            _worldPacket.WritePackedGuid(Sender);
-        }
-
-        public ObjectGuid Sender;
-    }
-
     public class ReferAFriendFailure : ServerPacket
     {
         public ReferAFriendFailure() : base(ServerOpcodes.ReferAFriendFailure) { }

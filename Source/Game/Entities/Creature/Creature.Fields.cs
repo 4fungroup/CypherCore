@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ namespace Game.Entities
         public bool m_isTempWorldObject; //true when possessed
 
         ReactStates reactState;                           // for AI, not charmInfo
-        public MovementGeneratorType m_defaultMovementType { get; set; }
+        public MovementGeneratorType DefaultMovementType { get; set; }
         public ulong m_spawnId;
         byte m_equipmentId;
         sbyte m_originalEquipmentId; // can be -1

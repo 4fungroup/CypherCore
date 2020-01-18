@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -150,7 +150,7 @@ namespace Game
             WeatherType old_type = m_type;
             float old_grade = m_grade;
 
-            long gtime = Global.WorldMgr.GetGameTime();
+            long gtime = GameTime.GetGameTime();
             var ltime = Time.UnixTimeToDateTime(gtime).ToLocalTime();
             uint season = (uint)((ltime.DayOfYear - 78 + 365) / 91) % 4;
 

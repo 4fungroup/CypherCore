@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@ using Framework.GameMath;
 using Game.Entities;
 using Game.Maps;
 using System;
-using System.Linq;
 
 namespace Game.Movement
 {
@@ -175,7 +174,7 @@ namespace Game.Movement
                     // Check both start and end points, if they're both in water, then we can *safely* let the creature move
                     for (uint i = 0; i < _pathPoints.Length; ++i)
                     {
-                        ZLiquidStatus status = _sourceUnit.GetMap().getLiquidStatus(_sourceUnit.GetPhaseShift(), _pathPoints[i].X, _pathPoints[i].Y, _pathPoints[i].Z, MapConst.MapAllLiquidTypes);
+                        ZLiquidStatus status = _sourceUnit.GetMap().GetLiquidStatus(_sourceUnit.GetPhaseShift(), _pathPoints[i].X, _pathPoints[i].Y, _pathPoints[i].Z, MapConst.MapAllLiquidTypes);
                         // One of the points is not in the water, cancel movement.
                         if (status == ZLiquidStatus.NoWater)
                         {
@@ -840,7 +839,7 @@ namespace Game.Movement
         NavTerrainFlag GetNavTerrain(float x, float y, float z)
         {
             LiquidData data;
-            ZLiquidStatus liquidStatus = _sourceUnit.GetMap().getLiquidStatus(_sourceUnit.GetPhaseShift(), x, y, z, MapConst.MapAllLiquidTypes, out data);
+            ZLiquidStatus liquidStatus = _sourceUnit.GetMap().GetLiquidStatus(_sourceUnit.GetPhaseShift(), x, y, z, MapConst.MapAllLiquidTypes, out data);
             if (liquidStatus == ZLiquidStatus.NoWater)
                 return NavTerrainFlag.Ground;
 

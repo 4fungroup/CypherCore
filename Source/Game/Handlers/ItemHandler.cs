@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -934,8 +934,8 @@ namespace Game
             {
                 if (gems[i])
                 {
-                    uint gemScalingLevel = _player.getLevel();
-                    uint fixedLevel = gems[i].GetModifier(ItemModifier.ScalingStatDistributionFixedLevel);
+                    uint gemScalingLevel = _player.GetLevel();
+                    uint fixedLevel = gems[i].GetModifier(ItemModifier.TimewalkerLevel);
                     if (fixedLevel != 0)
                         gemScalingLevel = fixedLevel;
 
@@ -1027,7 +1027,7 @@ namespace Game
             GetPlayer().RefundItem(item);
         }
 
-        bool CanUseBank(ObjectGuid bankerGUID = default(ObjectGuid))
+        bool CanUseBank(ObjectGuid bankerGUID = default)
         {
             // bankerGUID parameter is optional, set to 0 by default.
             if (bankerGUID.IsEmpty())

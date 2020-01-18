@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@ using Framework.Constants;
 using Game.Entities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using Framework.Dynamic;
 
 namespace Game.Network.Packets
 {
@@ -303,7 +303,11 @@ namespace Game.Network.Packets
             data.WriteUInt32(TimeFromStart);
             data.WriteUInt32(TimeFromCreate);
             data.WriteBits(Flags, 4);
+            data.WriteBit(RafAcceptanceID.HasValue);
             data.FlushBits();
+
+            if (RafAcceptanceID.HasValue)
+                data.WriteUInt64(RafAcceptanceID.Value);
         }
 
         public uint Id;
@@ -313,6 +317,7 @@ namespace Game.Network.Packets
         public long Date;
         public uint TimeFromStart;
         public uint TimeFromCreate;
+        public Optional<ulong> RafAcceptanceID;
     }
 
     public struct GuildCriteriaProgress

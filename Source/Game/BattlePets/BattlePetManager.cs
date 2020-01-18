@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -454,7 +454,7 @@ namespace Game.BattlePets
             _owner.SendPacket(battlePetError);
         }
 
-        public BattlePetSlot GetSlot(byte slot) { return _slots[slot]; }
+        public BattlePetSlot GetSlot(byte slot) { return slot < _slots.Count ? _slots[slot] : null; }
         WorldSession GetOwner() { return _owner; }
 
         public ushort GetTrapLevel() { return _trapLevel; }

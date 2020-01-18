@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -110,8 +110,13 @@ namespace Game.Entities
             m_areaUpdateId = newArea;
 
             AreaTableRecord area = CliDB.AreaTableStorage.LookupByKey(newArea);
+            bool oldFFAPvPArea = pvpInfo.IsInFFAPvPArea;
             pvpInfo.IsInFFAPvPArea = area != null && area.Flags[0].HasAnyFlag(AreaFlags.Arena);
             UpdatePvPState(true);
+
+            // check if we were in ffa arena and we left
+            if (oldFFAPvPArea && !pvpInfo.IsInFFAPvPArea)
+                ValidateAttackersAndOwnTarget();
 
             PhasingHandler.OnAreaChange(this);
             UpdateAreaDependentAuras(newArea);
@@ -451,9 +456,9 @@ namespace Game.Entities
 
                 if (!WorldConfig.GetBoolValue(WorldCfg.InstanceIgnoreLevel))
                 {
-                    if (ar.levelMin != 0 && getLevel() < ar.levelMin)
+                    if (ar.levelMin != 0 && GetLevel() < ar.levelMin)
                         LevelMin = ar.levelMin;
-                    if (ar.levelMax != 0 && getLevel() > ar.levelMax)
+                    if (ar.levelMax != 0 && GetLevel() > ar.levelMax)
                         LevelMax = ar.levelMax;
                 }
 
@@ -532,7 +537,7 @@ namespace Game.Entities
 
             // raid instances require the player to be in a raid group to be valid
             if (map.IsRaid() && !WorldConfig.GetBoolValue(WorldCfg.InstanceIgnoreRaid) && (map.GetEntry().Expansion() >= (Expansion)WorldConfig.GetIntValue(WorldCfg.Expansion)))
-                if (!GetGroup() || !GetGroup().isRaidGroup())
+                if (!GetGroup() || !GetGroup().IsRaidGroup())
                     return false;
 
             Group group = GetGroup();
@@ -710,7 +715,7 @@ namespace Game.Entities
         public override void UpdateUnderwaterState(Map m, float x, float y, float z)
         {
             LiquidData liquid_status;
-            ZLiquidStatus res = m.getLiquidStatus(GetPhaseShift(), x, y, z, MapConst.MapAllLiquidTypes, out liquid_status);
+            ZLiquidStatus res = m.GetLiquidStatus(GetPhaseShift(), x, y, z, MapConst.MapAllLiquidTypes, out liquid_status);
             if (res == 0)
             {
                 m_MirrorTimerFlags &= ~(PlayerUnderwaterState.InWater | PlayerUnderwaterState.InLava | PlayerUnderwaterState.InSlime | PlayerUnderwaterState.InDarkWater);

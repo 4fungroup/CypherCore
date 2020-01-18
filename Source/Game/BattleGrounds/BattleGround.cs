@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -116,7 +116,7 @@ namespace Game.BattleGrounds
                     _ProcessOfflineQueue();
                     _ProcessPlayerPositionBroadcast(diff);
                     // after 47 Time.Minutes without one team losing, the arena closes with no winner and no rating change
-                    if (isArena())
+                    if (IsArena())
                     {
                         if (GetElapsedTime() >= 47 * Time.Minute * Time.InMilliseconds)
                         {
@@ -206,7 +206,7 @@ namespace Game.BattleGrounds
                 var bgPlayer = m_Players.LookupByKey(guid);
                 if (bgPlayer != null)
                 {
-                    if (bgPlayer.OfflineRemoveTime <= Global.WorldMgr.GetGameTime())
+                    if (bgPlayer.OfflineRemoveTime <= GameTime.GetGameTime())
                     {
                         RemovePlayerAtLeave(guid, true, true);// remove player from BG
                         m_OfflineQueue.RemoveAt(0);                 // remove from offline queue
@@ -298,7 +298,7 @@ namespace Game.BattleGrounds
                 EndBattleground(GetPrematureWinner());
                 m_PrematureCountDown = false;
             }
-            else if (!Global.BattlegroundMgr.isTesting())
+            else if (!Global.BattlegroundMgr.IsTesting())
             {
                 uint newtime = m_PrematureCountDownTimer - diff;
                 // announce every Time.Minute
@@ -324,7 +324,7 @@ namespace Game.BattleGrounds
             // *********************************************************
             ModifyStartDelayTime((int)diff);
 
-            if (!isArena())
+            if (!IsArena())
                 SetRemainingTime(300000);
 
             if (m_ResetStatTimer > 5000)
@@ -341,7 +341,7 @@ namespace Game.BattleGrounds
             // Send packet every 10 seconds until the 2nd field reach 0
             if (m_CountdownTimer >= 10000)
             {
-                uint countdownMaxForBGType = isArena() ? BattlegroundConst.ArenaCountdownMax : BattlegroundConst.BattlegroundCountdownMax;
+                uint countdownMaxForBGType = IsArena() ? BattlegroundConst.ArenaCountdownMax : BattlegroundConst.BattlegroundCountdownMax;
 
                 StartTimer timer = new StartTimer();
                 timer.Type = TimerType.Pvp;
@@ -409,7 +409,7 @@ namespace Game.BattleGrounds
                 SetStartDelayTime(StartDelayTimes[BattlegroundConst.EventIdFourth]);
 
                 // Remove preparation
-                if (isArena())
+                if (IsArena())
                 {
                     //todo add arena sound PlaySoundToAll(SOUND_ARENA_START);
                     foreach (var guid in GetPlayers().Keys)
@@ -655,7 +655,7 @@ namespace Game.BattleGrounds
 
             if (winner == Team.Alliance)
             {
-                if (isBattleground())
+                if (IsBattleground())
                     SendBroadcastText(BattlegroundBroadcastTexts.AllianceWins, ChatMsg.BgSystemNeutral);
 
                 PlaySoundToAll((uint)BattlegroundSounds.AllianceWins);
@@ -663,7 +663,7 @@ namespace Game.BattleGrounds
             }
             else if (winner == Team.Horde)
             {
-                if (isBattleground())
+                if (IsBattleground())
                     SendBroadcastText(BattlegroundBroadcastTexts.HordeWins, ChatMsg.BgSystemNeutral);
 
                 PlaySoundToAll((uint)BattlegroundSounds.HordeWins);
@@ -676,7 +676,7 @@ namespace Game.BattleGrounds
 
             PreparedStatement stmt = null;
             ulong battlegroundId = 1;
-            if (isBattleground() && WorldConfig.GetBoolValue(WorldCfg.BattlegroundStoreStatisticsEnable))
+            if (IsBattleground() && WorldConfig.GetBoolValue(WorldCfg.BattlegroundStoreStatisticsEnable))
             {
                 stmt = DB.Characters.GetPreparedStatement(CharStatements.SEL_PVPSTATS_MAXID);
                 SQLResult result = DB.Characters.Query(stmt);
@@ -722,7 +722,7 @@ namespace Game.BattleGrounds
                 {
                     //needed cause else in av some creatures will kill the players at the end
                     player.CombatStop();
-                    player.getHostileRefManager().deleteReferences();
+                    player.GetHostileRefManager().DeleteReferences();
                 }
 
                 // remove temporary currency bonus auras before rewarding player
@@ -732,7 +732,7 @@ namespace Game.BattleGrounds
                 uint winnerKills = player.GetRandomWinner() ? WorldConfig.GetUIntValue(WorldCfg.BgRewardWinnerHonorLast) : WorldConfig.GetUIntValue(WorldCfg.BgRewardWinnerHonorFirst);
                 uint loserKills = player.GetRandomWinner() ? WorldConfig.GetUIntValue(WorldCfg.BgRewardLoserHonorLast) : WorldConfig.GetUIntValue(WorldCfg.BgRewardLoserHonorFirst);
 
-                if (isBattleground() && WorldConfig.GetBoolValue(WorldCfg.BattlegroundStoreStatisticsEnable))
+                if (IsBattleground() && WorldConfig.GetBoolValue(WorldCfg.BattlegroundStoreStatisticsEnable))
                 {
                     stmt = DB.Characters.GetPreparedStatement(CharStatements.INS_PVPSTATS_PLAYER);
                     var score = PlayerScores.LookupByKey(player.GetGUID());
@@ -810,7 +810,7 @@ namespace Game.BattleGrounds
         {
             //variable kills means how many honorable kills you scored (so we need kills * honor_for_one_kill)
             uint maxLevel = Math.Min(GetMaxLevel(), 80U);
-            return Formulas.hk_honor_at_level(maxLevel, kills);
+            return Formulas.HKHonorAtLevel(maxLevel, kills);
         }
 
         void BlockMovement(Player player)
@@ -867,7 +867,7 @@ namespace Game.BattleGrounds
                     player.ClearAfkReports();
 
                     // if arena, remove the specific arena auras
-                    if (isArena())
+                    if (IsArena())
                     {
                         bgTypeId = BattlegroundTypeId.AA;                   // set the bg type to all arenas (it will be used for queue refreshing)
 
@@ -895,7 +895,7 @@ namespace Game.BattleGrounds
                 }
                 DecreaseInvitedCount(team);
                 //we should update Battleground queue, but only if bg isn't ending
-                if (isBattleground() && GetStatus() < BattlegroundStatus.WaitLeave)
+                if (IsBattleground() && GetStatus() < BattlegroundStatus.WaitLeave)
                 {
                     // a player has left the Battleground, so there are free slots . add to queue
                     AddToBGFreeSlotQueue();
@@ -966,15 +966,15 @@ namespace Game.BattleGrounds
 
         public void TeleportPlayerToExploitLocation(Player player)
         {
-            WorldSafeLocsRecord loc = GetExploitTeleportLocation(player.GetBGTeam());
+            WorldSafeLocsEntry loc = GetExploitTeleportLocation(player.GetBGTeam());
             if (loc != null)
-                player.TeleportTo(loc.MapID, loc.Loc.X, loc.Loc.Y, loc.Loc.Z, loc.Facing);
+                player.TeleportTo(loc.Loc);
         }
 
         public virtual void AddPlayer(Player player)
         {
             // remove afk from player
-            if (player.isAFK())
+            if (player.IsAFK())
                 player.ToggleAFK();
 
             // score struct must be created in inherited class
@@ -1007,7 +1007,7 @@ namespace Game.BattleGrounds
             player.RemoveAurasByType(AuraType.Mounted);
 
             // add arena specific auras
-            if (isArena())
+            if (IsArena())
             {
                 player.RemoveArenaEnchantments(EnchantmentSlot.Temp);
 
@@ -1026,7 +1026,7 @@ namespace Game.BattleGrounds
                 {
                     player.CastSpell(player, BattlegroundConst.SpellPreparation, true);   // reduces all mana cost of spells.
 
-                    uint countdownMaxForBGType = isArena() ? BattlegroundConst.ArenaCountdownMax : BattlegroundConst.BattlegroundCountdownMax;
+                    uint countdownMaxForBGType = IsArena() ? BattlegroundConst.ArenaCountdownMax : BattlegroundConst.BattlegroundCountdownMax;
                     StartTimer timer = new StartTimer();
                     timer.Type = TimerType.Pvp;
                     timer.TimeRemaining = countdownMaxForBGType - (GetElapsedTime() / 1000);
@@ -1113,14 +1113,14 @@ namespace Game.BattleGrounds
 
             // player is correct pointer, it is checked in WorldSession.LogoutPlayer()
             m_OfflineQueue.Add(player.GetGUID());
-            m_Players[guid].OfflineRemoveTime = Global.WorldMgr.GetGameTime() + BattlegroundConst.MaxOfflineTime;
+            m_Players[guid].OfflineRemoveTime = GameTime.GetGameTime() + BattlegroundConst.MaxOfflineTime;
             if (GetStatus() == BattlegroundStatus.InProgress)
             {
                 // drop flag and handle other cleanups
                 RemovePlayer(player, guid, GetPlayerTeam(guid));
 
                 // 1 player is logging out, if it is the last, then end arena!
-                if (isArena())
+                if (IsArena())
                     if (GetAlivePlayersCountByTeam(player.GetBGTeam()) <= 1 && GetPlayersCountByTeam(GetOtherTeam(player.GetBGTeam())) != 0)
                         EndBattleground(GetOtherTeam(player.GetBGTeam()));
             }
@@ -1129,7 +1129,7 @@ namespace Game.BattleGrounds
         // This method should be called only once ... it adds pointer to queue
         void AddToBGFreeSlotQueue()
         {
-            if (!m_InBGFreeSlotQueue && isBattleground())
+            if (!m_InBGFreeSlotQueue && IsBattleground())
             {
                 Global.BattlegroundMgr.AddToBGFreeSlotQueue(m_TypeID, this);
                 m_InBGFreeSlotQueue = true;
@@ -1251,7 +1251,7 @@ namespace Game.BattleGrounds
             if (bgScore == null)  // player not found...
                 return false;
 
-            if (type == ScoreType.BonusHonor && doAddHonor && isBattleground())
+            if (type == ScoreType.BonusHonor && doAddHonor && IsBattleground())
                 player.RewardHonor(null, 1, (int)value);
             else
                 bgScore.UpdateScore(type, value);
@@ -1292,7 +1292,7 @@ namespace Game.BattleGrounds
             List<ObjectGuid> ghostList = m_ReviveQueue[guideGuid];
             if (!ghostList.Empty())
             {
-                WorldSafeLocsRecord closestGrave = null;
+                WorldSafeLocsEntry closestGrave = null;
                 foreach (var guid in ghostList)
                 {
                     Player player = Global.ObjAccessor.FindPlayer(guid);
@@ -1303,7 +1303,7 @@ namespace Game.BattleGrounds
                         closestGrave = GetClosestGraveYard(player);
 
                     if (closestGrave != null)
-                        player.TeleportTo(GetMapId(), closestGrave.Loc.X, closestGrave.Loc.Y, closestGrave.Loc.Z, player.GetOrientation());
+                        player.TeleportTo(closestGrave.Loc);
                 }
                 ghostList.Clear();
             }
@@ -1356,7 +1356,7 @@ namespace Game.BattleGrounds
             if (obj)
             {
                 // If doors are open, close it
-                if (obj.getLootState() == LootState.Activated && obj.GetGoState() != GameObjectState.Ready)
+                if (obj.GetLootState() == LootState.Activated && obj.GetGoState() != GameObjectState.Ready)
                 {
                     obj.SetLootState(LootState.Ready);
                     obj.SetGoState(GameObjectState.Ready);
@@ -1416,7 +1416,7 @@ namespace Game.BattleGrounds
                         obj.SetLootState(LootState.JustDeactivated);
                     else
                     {
-                        if (obj.getLootState() == LootState.JustDeactivated)
+                        if (obj.GetLootState() == LootState.JustDeactivated)
                             // Change state from GO_JUST_DEACTIVATED to GO_READY in case Battleground is starting again
                             obj.SetLootState(LootState.Ready);
                     }
@@ -1523,7 +1523,7 @@ namespace Game.BattleGrounds
             Creature creature = AddCreature(entry, type, x, y, z, o);
             if (creature)
             {
-                creature.setDeathState(DeathState.Dead);
+                creature.SetDeathState(DeathState.Dead);
                 creature.AddChannelObject(creature.GetGUID());
                 // aura
                 //todo Fix display here
@@ -1578,7 +1578,7 @@ namespace Game.BattleGrounds
         public void HandleTriggerBuff(ObjectGuid goGuid)
         {
             GameObject obj = GetBgMap().GetGameObject(goGuid);
-            if (!obj || obj.GetGoType() != GameObjectTypes.Trap || !obj.isSpawned())
+            if (!obj || obj.GetGoType() != GameObjectTypes.Trap || !obj.IsSpawned())
                 return;
 
             // Change buff type, when buff is used:
@@ -1640,7 +1640,7 @@ namespace Game.BattleGrounds
                 }
             }
 
-            if (!isArena())
+            if (!IsArena())
             {
                 // To be able to remove insignia -- ONLY IN Battlegrounds
                 victim.AddUnitFlag(UnitFlags.Skinnable);
@@ -1735,7 +1735,7 @@ namespace Game.BattleGrounds
             m_BgRaids[GetTeamIndexByTeamId(team)] = bg_raid;
         }
 
-        public virtual WorldSafeLocsRecord GetClosestGraveYard(Player player)
+        public virtual WorldSafeLocsEntry GetClosestGraveYard(Player player)
         {
             return Global.ObjectMgr.GetClosestGraveYard(player, player.GetTeam(), player);
         }
@@ -1869,9 +1869,9 @@ namespace Game.BattleGrounds
         public void SetRandom(bool isRandom) { m_IsRandom = isRandom; }
         uint GetInvitedCount(Team team) { return (team == Team.Alliance) ? m_InvitedAlliance : m_InvitedHorde; }
 
-        public bool isArena() { return m_IsArena; }
-        public bool isBattleground() { return !m_IsArena; }
-        public bool isRated() { return m_IsRated; }
+        public bool IsArena() { return m_IsArena; }
+        public bool IsBattleground() { return !m_IsArena; }
+        public bool IsRated() { return m_IsRated; }
 
         public Dictionary<ObjectGuid, BattlegroundPlayer> GetPlayers() { return m_Players; }
         uint GetPlayersSize() { return (uint)m_Players.Count; }
@@ -1926,7 +1926,7 @@ namespace Game.BattleGrounds
 
         public virtual void HandlePlayerResurrect(Player player) { }
 
-        public virtual WorldSafeLocsRecord GetExploitTeleportLocation(Team team) { return null; }
+        public virtual WorldSafeLocsEntry GetExploitTeleportLocation(Team team) { return null; }
 
         public virtual bool HandlePlayerUnderMap(Player player) { return false; }
 

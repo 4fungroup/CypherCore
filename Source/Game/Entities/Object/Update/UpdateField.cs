@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,9 @@ namespace Game.Entities
 {
     public class UpdateFieldHolder
     {
+        UpdateMask _changesMask = new UpdateMask((int)TypeId.Max);
+        WorldObject _owner;
+
         public UpdateFieldHolder(WorldObject owner) { _owner = owner; }
 
         public BaseUpdateData<T> ModifyValue<T>(BaseUpdateData<T> updateData)
@@ -38,6 +41,7 @@ namespace Game.Entities
         public void ClearChangesMask<T>(BaseUpdateData<T> updateData)
         {
             _changesMask.Reset(updateData.Bit);
+            updateData.ClearChangesMask();
         }
 
         public void ClearChangesMask<T, U>(BaseUpdateData<T> updateData, ref UpdateField<U> updateField) where T : new() where U : new()
@@ -58,9 +62,6 @@ namespace Game.Entities
         {
             return _changesMask[(int)index];
         }
-
-        UpdateMask _changesMask = new UpdateMask((int)TypeId.Max);
-        WorldObject _owner;
     }
 
     public interface IUpdateField<T>
@@ -159,6 +160,11 @@ namespace Game.Entities
             return _values.IndexOf(value);
         }
 
+        public int FindIndexIf(Predicate<T> blah)
+        {
+            return _values.FindIndex(blah);
+        }
+
         public bool HasChanged(int index)
         {
             return (_updateMask[index / 32] & (1 << (index % 32))) != 0;
@@ -175,6 +181,12 @@ namespace Game.Entities
                 else
                     for (int block = 0; block < _values.Count / 32; ++block)
                         data.WriteUInt32(_updateMask[block]);
+            }
+
+            else if (_values.Count == 32)
+            {
+                data.WriteBits(_updateMask.Last(), 32);
+                return;
             }
 
             if ((_values.Count % 32) != 0)
@@ -256,6 +268,11 @@ namespace Game.Entities
             _updateMask[block] &= ~(uint)UpdateMask.GetBlockFlag(index);
         }
 
+        public bool Empty()
+        {
+            return _values.Empty();
+        }
+
         public int Size()
         {
             return _values.Count;
@@ -312,8 +329,10 @@ namespace Game.Entities
             _changesMask = new UpdateMask(changeMask);
         }
 
-        public abstract void WriteCreate(WorldPacket data, UpdateFieldFlag fieldVisibilityFlags, T owner, Player receiver);
-        public abstract void WriteUpdate(WorldPacket data, UpdateFieldFlag fieldVisibilityFlags, T owner, Player receiver);
+        public virtual void WriteCreate(WorldPacket data, T owner, Player receiver) { }
+        public virtual void WriteUpdate(WorldPacket data, T owner, Player receiver) { }
+        public virtual void WriteCreate(WorldPacket data, UpdateFieldFlag fieldVisibilityFlags, T owner, Player receiver) { }
+        public virtual void WriteUpdate(WorldPacket data, UpdateFieldFlag fieldVisibilityFlags, T owner, Player receiver) { }
 
         public abstract void ClearChangesMask();
 
@@ -341,13 +360,13 @@ namespace Game.Entities
 
         public void ClearChangesMask<U>(UpdateField<U> updateField) where U : new()
         {
-            if (typeof(U).BaseType == typeof(IHasChangesMask))
+            if (typeof(U).GetInterfaces().Any(x => typeof(IHasChangesMask) == x))
                 ((IHasChangesMask)updateField._value).ClearChangesMask();
         }
 
         public void ClearChangesMask<U>(UpdateFieldArray<U> updateField) where U : new()
         {
-            if (typeof(U).BaseType == typeof(IHasChangesMask))
+            if (typeof(U).GetInterfaces().Any(x => typeof(IHasChangesMask) == x))
             {
                 for (int i = 0; i < updateField.GetSize(); ++i)
                     ((IHasChangesMask)updateField[i]).ClearChangesMask();
@@ -356,7 +375,7 @@ namespace Game.Entities
 
         public void ClearChangesMask<U>(DynamicUpdateField<U> updateField) where U : new()
         {
-            if (typeof(U).BaseType == typeof(IHasChangesMask))
+            if (typeof(U).GetInterfaces().Any(x => typeof(IHasChangesMask) == x))
             {
                 for (int i = 0; i < updateField.Size(); ++i)
                     ((IHasChangesMask)updateField[i]).ClearChangesMask();
@@ -381,7 +400,7 @@ namespace Game.Entities
         {
             var fieldInfo = ((MemberExpression)expression.Body).Member as FieldInfo;
             if (fieldInfo == null)
-                throw new ArgumentException("The lambda expression 'property' should point to a valid Property");
+                throw new ArgumentException("The lambda expression should point to a valid Field");
 
             var updateFieldArray = (UpdateFieldArray<UU>)fieldInfo.GetValue(this);
             _changesMask.Set(updateFieldArray.Bit);
@@ -429,6 +448,9 @@ namespace Game.Entities
 
     public class DynamicUpdateFieldSetter<T> : IUpdateField<T> where T : new()
     {
+        DynamicUpdateField<T> _dynamicUpdateField;
+        int _index;
+
         public DynamicUpdateFieldSetter(DynamicUpdateField<T> dynamicUpdateField, int index)
         {
             _dynamicUpdateField = dynamicUpdateField;
@@ -446,8 +468,5 @@ namespace Game.Entities
         {
             return dynamicUpdateFieldSetter.GetValue();
         }
-
-        DynamicUpdateField<T> _dynamicUpdateField;
-        int _index;
     }
 }

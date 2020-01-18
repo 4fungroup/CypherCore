@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@ using Game.Entities;
 using Game.Mails;
 using Game.Network.Packets;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Game.BlackMarket
 {
@@ -241,7 +240,7 @@ namespace Game.BlackMarket
 
             // Create item
             BlackMarketTemplate templ = entry.GetTemplate();
-            Item item = Item.CreateItem(templ.Item.ItemID, templ.Quantity);
+            Item item = Item.CreateItem(templ.Item.ItemID, templ.Quantity, ItemContext.BlackMarket);
             if (!item)
                 return;
 

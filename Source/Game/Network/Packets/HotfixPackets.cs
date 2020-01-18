@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ namespace Game.Network.Packets
             uint count = _worldPacket.ReadBits<uint>(13);
             for (uint i = 0; i < count; ++i)
             {
-                Queries.Add(new DBQueryRecord(_worldPacket.ReadPackedGuid(), _worldPacket.ReadUInt32()));
+                Queries.Add(new DBQueryRecord(_worldPacket.ReadUInt32()));
             }
         }
 
@@ -44,13 +44,11 @@ namespace Game.Network.Packets
 
         public struct DBQueryRecord
         {
-            public DBQueryRecord(ObjectGuid guid, uint recordId)
+            public DBQueryRecord(uint recordId)
             {
-                GUID = guid;
                 RecordID = recordId;
             }
 
-            public ObjectGuid GUID;
             public uint RecordID;
         }
     }

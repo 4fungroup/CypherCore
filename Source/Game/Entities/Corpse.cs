@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,8 +32,8 @@ namespace Game.Entities
         public Corpse(CorpseType type = CorpseType.Bones) : base(type != CorpseType.Bones)
         {
             m_type = type;
-            objectTypeId = TypeId.Corpse;
-            objectTypeMask |= TypeMask.Corpse;
+            ObjectTypeId = TypeId.Corpse;
+            ObjectTypeMask |= TypeMask.Corpse;
 
             m_updateFlag.Stationary = true;
 

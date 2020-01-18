@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2012-2019 CypherCore <http://github.com/CypherCore>
+ * Copyright (C) 2012-2020 CypherCore <http://github.com/CypherCore>
  * 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,13 +58,13 @@ namespace Game.Entities
                             continue;
                         }
 
-                        if (AuraEffectHandlers.ContainsKey(auraEffect.auraType))
+                        if (AuraEffectHandlers.ContainsKey(auraEffect.AuraType))
                         {
-                            Log.outError(LogFilter.ServerLoading, "Tried to override AuraEffectHandler of {0} with {1} (AuraType {2}).", AuraEffectHandlers[auraEffect.auraType].ToString(), methodInfo.Name, auraEffect.auraType);
+                            Log.outError(LogFilter.ServerLoading, "Tried to override AuraEffectHandler of {0} with {1} (AuraType {2}).", AuraEffectHandlers[auraEffect.AuraType].ToString(), methodInfo.Name, auraEffect.AuraType);
                             continue;
                         }
 
-                        AuraEffectHandlers.Add(auraEffect.auraType, (AuraEffectHandler)methodInfo.CreateDelegate(typeof(AuraEffectHandler)));
+                        AuraEffectHandlers.Add(auraEffect.AuraType, (AuraEffectHandler)methodInfo.CreateDelegate(typeof(AuraEffectHandler)));
 
                     }
 
@@ -86,13 +86,13 @@ namespace Game.Entities
                             continue;
                         }
 
-                        if (SpellEffectsHandlers.ContainsKey(spellEffect.effectName))
+                        if (SpellEffectsHandlers.ContainsKey(spellEffect.EffectName))
                         {
-                            Log.outError(LogFilter.ServerLoading, "Tried to override SpellEffectsHandler of {0} with {1} (EffectName {2}).", SpellEffectsHandlers[spellEffect.effectName].ToString(), methodInfo.Name, spellEffect.effectName);
+                            Log.outError(LogFilter.ServerLoading, "Tried to override SpellEffectsHandler of {0} with {1} (EffectName {2}).", SpellEffectsHandlers[spellEffect.EffectName].ToString(), methodInfo.Name, spellEffect.EffectName);
                             continue;
                         }
 
-                        SpellEffectsHandlers.Add(spellEffect.effectName, (SpellEffectHandler)methodInfo.CreateDelegate(typeof(SpellEffectHandler)));
+                        SpellEffectsHandlers.Add(spellEffect.EffectName, (SpellEffectHandler)methodInfo.CreateDelegate(typeof(SpellEffectHandler)));
                     }
                 }
             }
@@ -460,7 +460,7 @@ namespace Game.Entities
             {
                 Player actor = eventInfo.GetActor().ToPlayer();
                 if (actor)
-                    if (eventInfo.GetActionTarget() && !actor.isHonorOrXPTarget(eventInfo.GetActionTarget()))
+                    if (eventInfo.GetActionTarget() && !actor.IsHonorOrXPTarget(eventInfo.GetActionTarget()))
                         return false;
             }
 
@@ -1159,7 +1159,7 @@ namespace Game.Entities
             //                                            0        1           2                3                 4                 5                 6
             SQLResult result = DB.World.Query("SELECT SpellId, SchoolMask, SpellFamilyName, SpellFamilyMask0, SpellFamilyMask1, SpellFamilyMask2, SpellFamilyMask3, " +
             //           7              8               9       10              11              12      13        14      15
-                "ProcFlags, SpellTypeMask, SpellPhaseMask, HitMask, AttributesMask, ProcsPerMinute, Chance, Cooldown, Charges FROM spell_proc");
+                "ProcFlags, SpellTypeMask, SpellPhaseMask, HitMask, AttributesMask, DisableEffectsMask, ProcsPerMinute, Chance, Cooldown, Charges FROM spell_proc");
 
             uint count = 0;
             if (!result.IsEmpty())
@@ -1201,10 +1201,11 @@ namespace Game.Entities
                     baseProcEntry.SpellPhaseMask = (ProcFlagsSpellPhase)result.Read<uint>(9);
                     baseProcEntry.HitMask = (ProcFlagsHit)result.Read<uint>(10);
                     baseProcEntry.AttributesMask = (ProcAttributes)result.Read<uint>(11);
-                    baseProcEntry.ProcsPerMinute = result.Read<float>(12);
-                    baseProcEntry.Chance = result.Read<float>(13);
-                    baseProcEntry.Cooldown = result.Read<uint>(14);
-                    baseProcEntry.Charges = result.Read<uint>(15);
+                    baseProcEntry.DisableEffectsMask = result.Read<uint>(12);
+                    baseProcEntry.ProcsPerMinute = result.Read<float>(13);
+                    baseProcEntry.Chance = result.Read<float>(14);
+                    baseProcEntry.Cooldown = result.Read<uint>(15);
+                    baseProcEntry.Charges = result.Read<uint>(16);
 
                     while (spellInfo != null)
                     {
@@ -1303,11 +1304,11 @@ namespace Game.Entities
                     if (auraName == 0)
                         continue;
 
-                    if (!isTriggerAura(auraName))
+                    if (!IsTriggerAura(auraName))
                         continue;
 
-                    procSpellTypeMask |= getSpellTypeMask(auraName);
-                    if (isAlwaysTriggeredAura(auraName))
+                    procSpellTypeMask |= GetSpellTypeMask(auraName);
+                    if (IsAlwaysTriggeredAura(auraName))
                         addTriggerFlag = true;
 
                     // many proc auras with taken procFlag mask don't have attribute "can proc with triggered"
@@ -1346,7 +1347,7 @@ namespace Game.Entities
                 procEntry.ProcFlags = spellInfo.ProcFlags;
                 procEntry.SpellFamilyName = 0;
                 foreach (SpellEffectInfo effect in spellInfo.GetEffectsForDifficulty(Difficulty.None))
-                    if (effect != null && effect.IsEffect() && isTriggerAura(effect.ApplyAuraName))
+                    if (effect != null && effect.IsEffect() && IsTriggerAura(effect.ApplyAuraName))
                         procEntry.SpellFamilyMask |= effect.SpellClassMask;
 
                 if (procEntry.SpellFamilyMask)
@@ -1383,6 +1384,7 @@ namespace Game.Entities
                 }
 
                 procEntry.AttributesMask = 0;
+                procEntry.DisableEffectsMask = 0;
                 if (spellInfo.ProcFlags.HasAnyFlag(ProcFlags.Kill))
                     procEntry.AttributesMask |= ProcAttributes.ReqExpOrHonor;
                 if (addTriggerFlag)
@@ -1546,8 +1548,8 @@ namespace Game.Entities
 
             mSpellEnchantProcEventMap.Clear();                             // need for reload case
 
-            //                                                  0         1           2         3
-            SQLResult result = DB.World.Query("SELECT entry, customChance, PPMChance, procEx FROM spell_enchant_proc_data");
+            //                                         0          1       2               3        4
+            SQLResult result = DB.World.Query("SELECT EnchantID, Chance, ProcsPerMinute, HitMask, AttributesMask FROM spell_enchant_proc_data");
             if (result.IsEmpty())
             {
                 Log.outInfo(LogFilter.ServerLoading, "Loaded 0 spell enchant proc event conditions. DB table `spell_enchant_proc_data` is empty.");
@@ -1567,9 +1569,10 @@ namespace Game.Entities
                 }
 
                 SpellEnchantProcEntry spe = new SpellEnchantProcEntry();
-                spe.customChance = result.Read<uint>(1);
-                spe.PPMChance = result.Read<float>(2);
-                spe.procEx = result.Read<uint>(3);
+                spe.Chance = result.Read<uint>(1);
+                spe.ProcsPerMinute = result.Read<float>(2);
+                spe.HitMask = result.Read<uint>(3);
+                spe.AttributesMask = (EnchantProcAttributes)result.Read<uint>(4);
 
                 mSpellEnchantProcEventMap[enchantId] = spe;
 
@@ -1987,92 +1990,97 @@ namespace Game.Entities
                 effectsBySpell[effect.SpellID][effect.DifficultyID][effect.EffectIndex] = effect;
             }
 
-            foreach (var spell in CliDB.SpellNameStorage.Values)
-                loadData[spell.Id] = new SpellInfoLoadHelper();
+            SpellInfoLoadHelper GetSpellInfoLoadHelper(uint spellId)
+            {
+                if (!loadData.ContainsKey(spellId))
+                    loadData[spellId] = new SpellInfoLoadHelper();
+
+                return loadData[spellId];
+            }
 
             foreach (SpellAuraOptionsRecord auraOptions in CliDB.SpellAuraOptionsStorage.Values)
                 if (auraOptions.DifficultyID == 0)    // TODO: implement
-                    loadData[auraOptions.SpellID].AuraOptions = auraOptions;
+                    GetSpellInfoLoadHelper(auraOptions.SpellID).AuraOptions = auraOptions;
 
             CliDB.SpellAuraOptionsStorage.Clear();
 
             foreach (SpellAuraRestrictionsRecord auraRestrictions in CliDB.SpellAuraRestrictionsStorage.Values)
             {
                 if (auraRestrictions.DifficultyID == 0)    // TODO: implement
-                    loadData[auraRestrictions.SpellID].AuraRestrictions = auraRestrictions;
+                    GetSpellInfoLoadHelper(auraRestrictions.SpellID).AuraRestrictions = auraRestrictions;
             }
             CliDB.SpellAuraRestrictionsStorage.Clear();
 
             foreach (SpellCastingRequirementsRecord castingRequirements in CliDB.SpellCastingRequirementsStorage.Values)
-                loadData[castingRequirements.SpellID].CastingRequirements = castingRequirements;
+                GetSpellInfoLoadHelper(castingRequirements.SpellID).CastingRequirements = castingRequirements;
 
             CliDB.SpellCastingRequirementsStorage.Clear();
 
             foreach (SpellCategoriesRecord categories in CliDB.SpellCategoriesStorage.Values)
             {
                 if (categories.DifficultyID == 0)  // TODO: implement
-                    loadData[categories.SpellID].Categories = categories;
+                    GetSpellInfoLoadHelper(categories.SpellID).Categories = categories;
             }
             CliDB.SpellCategoriesStorage.Clear();
 
             foreach (SpellClassOptionsRecord classOptions in CliDB.SpellClassOptionsStorage.Values)
-                loadData[classOptions.SpellID].ClassOptions = classOptions;
+                GetSpellInfoLoadHelper(classOptions.SpellID).ClassOptions = classOptions;
 
             CliDB.SpellClassOptionsStorage.Clear();
 
             foreach (SpellCooldownsRecord cooldowns in CliDB.SpellCooldownsStorage.Values)
             {
                 if (cooldowns.DifficultyID == 0)   // TODO: implement
-                    loadData[cooldowns.SpellID].Cooldowns = cooldowns;
+                    GetSpellInfoLoadHelper(cooldowns.SpellID).Cooldowns = cooldowns;
             }
             CliDB.SpellCooldownsStorage.Clear();
 
             foreach (SpellEquippedItemsRecord equippedItems in CliDB.SpellEquippedItemsStorage.Values)
-                loadData[equippedItems.SpellID].EquippedItems = equippedItems;
+                GetSpellInfoLoadHelper(equippedItems.SpellID).EquippedItems = equippedItems;
 
             CliDB.SpellEquippedItemsStorage.Clear();
 
             foreach (SpellInterruptsRecord interrupts in CliDB.SpellInterruptsStorage.Values)
             {
                 if (interrupts.DifficultyID == 0)  // TODO: implement
-                    loadData[interrupts.SpellID].Interrupts = interrupts;
+                    GetSpellInfoLoadHelper(interrupts.SpellID).Interrupts = interrupts;
             }
             CliDB.SpellInterruptsStorage.Clear();
 
             foreach (SpellLevelsRecord levels in CliDB.SpellLevelsStorage.Values)
             {
                 if (levels.DifficultyID == 0)  // TODO: implement
-                    loadData[levels.SpellID].Levels = levels;
+                    GetSpellInfoLoadHelper(levels.SpellID).Levels = levels;
             }
 
             foreach (SpellMiscRecord misc in CliDB.SpellMiscStorage.Values)
                 if (misc.DifficultyID == 0)
-                    loadData[misc.SpellID].Misc = misc;
+                    GetSpellInfoLoadHelper(misc.SpellID).Misc = misc;
 
             foreach (SpellReagentsRecord reagents in CliDB.SpellReagentsStorage.Values)
-                loadData[reagents.SpellID].Reagents = reagents;
+                GetSpellInfoLoadHelper(reagents.SpellID).Reagents = reagents;
 
             CliDB.SpellReagentsStorage.Clear();
 
             foreach (SpellScalingRecord scaling in CliDB.SpellScalingStorage.Values)
-                loadData[scaling.SpellID].Scaling = scaling;
+                GetSpellInfoLoadHelper(scaling.SpellID).Scaling = scaling;
 
             CliDB.SpellScalingStorage.Clear();
 
             foreach (SpellShapeshiftRecord shapeshift in CliDB.SpellShapeshiftStorage.Values)
-                loadData[shapeshift.SpellID].Shapeshift = shapeshift;
+                GetSpellInfoLoadHelper(shapeshift.SpellID).Shapeshift = shapeshift;
 
             CliDB.SpellShapeshiftStorage.Clear();
 
             foreach (SpellTargetRestrictionsRecord targetRestrictions in CliDB.SpellTargetRestrictionsStorage.Values)
             {
                 if (targetRestrictions.DifficultyID == 0)  // TODO: implement
-                    loadData[targetRestrictions.SpellID].TargetRestrictions = targetRestrictions;
+                    GetSpellInfoLoadHelper(targetRestrictions.SpellID).TargetRestrictions = targetRestrictions;
             }
             CliDB.SpellTargetRestrictionsStorage.Clear();
 
             foreach (SpellTotemsRecord totems in CliDB.SpellTotemsStorage.Values)
-                loadData[totems.SpellID].Totems = totems;
+                GetSpellInfoLoadHelper(totems.SpellID).Totems = totems;
 
             CliDB.SpellTotemsStorage.Clear();
 
@@ -2086,7 +2094,7 @@ namespace Game.Entities
 
             foreach (var spellEntry in CliDB.SpellNameStorage.Values)
             {
-                loadData[spellEntry.Id].Entry = spellEntry;
+                GetSpellInfoLoadHelper(spellEntry.Id).Entry = spellEntry;
                 mSpellInfoMap[spellEntry.Id] = new SpellInfo(loadData[spellEntry.Id], effectsBySpell.LookupByKey(spellEntry.Id), visualsBySpell.LookupByKey(spellEntry.Id));
             }
 
@@ -2432,7 +2440,7 @@ namespace Game.Entities
                         case SpellEffectName.Jump:
                         case SpellEffectName.JumpDest:
                         case SpellEffectName.LeapBack:
-                            if (spellInfo.Speed == 0 && spellInfo.SpellFamilyName == 0)
+                            if (spellInfo.Speed == 0 && spellInfo.SpellFamilyName == 0 && !spellInfo.HasAttribute(SpellAttr9.SpecialDelayCalculation))
                                 spellInfo.Speed = MotionMaster.SPEED_CHARGE;
                             break;
                     }
@@ -2469,6 +2477,13 @@ namespace Game.Entities
                     case 29200: // Purify Helboar Meat
                         spellInfo.GetEffect(0).TargetA = new SpellImplicitTargetInfo(Targets.UnitCaster);
                         spellInfo.GetEffect(0).TargetB = new SpellImplicitTargetInfo();
+                        break;
+                    case 56690: // Thrust Spear
+                    case 60586: // Mighty Spear Thrust
+                    case 60776: // Claw Swipe
+                    case 60881: // Fatal Strike
+                    case 60864:  // Jaws of Death
+                        spellInfo.AttributesEx4 |= SpellAttr4.FixedDamage;
                         break;
                     case 31344: // Howl of Azgalor
                         spellInfo.GetEffect(0).RadiusEntry = CliDB.SpellRadiusStorage.LookupByKey(EffectRadiusIndex.Yards100); // 100yards instead of 50000?!
@@ -3000,6 +3015,10 @@ namespace Game.Entities
                             spellInfo.ConeAngle = 90.0f;
                 }
 
+                // disable proc for magnet auras, they're handled differently
+                if (spellInfo.HasAura(Difficulty.None, AuraType.SpellMagnet))
+                    spellInfo.ProcFlags = 0;
+
                 if (spellInfo.ActiveIconFileDataId == 135754)  // flight
                     spellInfo.Attributes |= SpellAttr0.Passive;
             }
@@ -3141,7 +3160,7 @@ namespace Game.Entities
         }
         #endregion
 
-        bool isTriggerAura(AuraType type)
+        bool IsTriggerAura(AuraType type)
         {
             switch (type)
             {
@@ -3194,7 +3213,7 @@ namespace Game.Entities
             }
             return false;
         }
-        bool isAlwaysTriggeredAura(AuraType type)
+        bool IsAlwaysTriggeredAura(AuraType type)
         {
             switch (type)
             {
@@ -3213,7 +3232,7 @@ namespace Game.Entities
             }
             return false;
         }
-        ProcFlagsSpellType getSpellTypeMask(AuraType type)
+        ProcFlagsSpellType GetSpellTypeMask(AuraType type)
         {
             switch (type)
             {
@@ -3383,10 +3402,10 @@ namespace Game.Entities
     {
         public AuraEffectHandlerAttribute(AuraType type)
         {
-            auraType = type;
+            AuraType = type;
         }
 
-        public AuraType auraType { get; set; }
+        public AuraType AuraType { get; set; }
     }
 
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
@@ -3394,10 +3413,10 @@ namespace Game.Entities
     {
         public SpellEffectHandlerAttribute(SpellEffectName effectName)
         {
-            this.effectName = effectName;
+            EffectName = effectName;
         }
 
-        public SpellEffectName effectName { get; set; }
+        public SpellEffectName EffectName { get; set; }
     }
 
     public class SpellInfoLoadHelper
@@ -3438,6 +3457,7 @@ namespace Game.Entities
         public ProcFlagsSpellPhase SpellPhaseMask { get; set; }                             // if nonzero - bitmask for matching phase of a spellcast on which proc occurs, see enum ProcFlagsSpellPhase
         public ProcFlagsHit HitMask { get; set; }                                    // if nonzero - bitmask for matching proc condition based on hit result, see enum ProcFlagsHit
         public ProcAttributes AttributesMask { get; set; }                             // bitmask, see ProcAttributes
+        public uint DisableEffectsMask { get; set; }                            // bitmask
         public float ProcsPerMinute { get; set; }                              // if nonzero - chance to proc is equal to value * aura caster's weapon speed / 60
         public float Chance { get; set; }                                     // if nonzero - owerwrite procChance field for given Spell.dbc entry, defines chance of proc to occur, not used if ProcsPerMinute set
         public uint Cooldown { get; set; }                                   // if nonzero - cooldown in secs for aura proc, applied to aura
@@ -3470,7 +3490,7 @@ namespace Game.Entities
                     return false;
 
             if (raceMask != 0)                                // not in expected race
-                if (player == null || !Convert.ToBoolean(raceMask & player.getRaceMask()))
+                if (player == null || !Convert.ToBoolean(raceMask & player.GetRaceMask()))
                     return false;
 
             if (areaId != 0)                                  // not in expected zone
@@ -3606,9 +3626,10 @@ namespace Game.Entities
 
     public class SpellEnchantProcEntry
     {
-        public uint customChance;
-        public float PPMChance;
-        public uint procEx;
+        public float Chance;         // if nonzero - overwrite SpellItemEnchantment value
+        public float ProcsPerMinute; // if nonzero - chance to proc is equal to value * aura caster's weapon speed / 60
+        public uint HitMask;        // if nonzero - bitmask for matching proc condition based on hit result, see enum ProcFlagsHit
+        public EnchantProcAttributes AttributesMask; // bitmask, see EnchantProcAttributes
     }
 
     public class SpellTargetPosition
